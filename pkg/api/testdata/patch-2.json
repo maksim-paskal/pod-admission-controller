@@ -1,1 +1,0 @@
-[{"op":"add","path":"/spec/containers/0/env","value":[{"name":"TEST_ENV_VAR","value":"test-value"}]},{"op":"add","path":"/spec/containers/0/securityContext","value":{"capabilities":{"drop":["ALL"]},"privileged":false,"runAsNonRoot":true,"allowPrivilegeEscalation":false}},{"op":"add","path":"/metadata/annotations","value":{"pod-admission-controller/injected":"true"}}]

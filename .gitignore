@@ -1,6 +1,0 @@
-/pod-admission-controller
-/dist/
-/certs/
-coverage.out
-/deploy-*
-/config.yaml

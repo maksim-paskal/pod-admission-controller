@@ -1,1 +1,0 @@
-{"capabilities":{"drop":["ALL"]},"privileged":false,"runAsUser":1001,"runAsNonRoot":true,"allowPrivilegeEscalation":false}
