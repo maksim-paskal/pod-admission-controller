@@ -72,3 +72,6 @@ clean:
 	helm uninstall pod-admission-controller --namespace pod-admission-controller || true
 	kubectl delete ns pod-admission-controller
 	kubectl delete ns $(testnamespace) || true
+
+chart-release:
+	./scripts/chart-release.sh
