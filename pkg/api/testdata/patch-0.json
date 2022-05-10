@@ -1,0 +1,1 @@
+[{"op":"add","path":"/spec/containers/0/env","value":[{"name":"TEST_ENV_VAR","value":"test-value"}]},{"op":"add","path":"/metadata/annotations","value":{"pod-admission-controller/injected":"true"}}]

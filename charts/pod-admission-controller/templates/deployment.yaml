@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      securityContext:
+        runAsNonRoot: true
+{{ if .Values.tolerations }}
+      tolerations:
+{{ toYaml .Values.tolerations | nindent 6 }}
+{{ end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - {{ .Release.Name }}
+            topologyKey: kubernetes.io/hostname
+      volumes:
+      - name: config
+        configMap:
+          name: {{ .Release.Name }}-config
+      containers:
+      - name: {{ .Release.Name }}
+        image: {{ .Values.registry.image }}
+        imagePullPolicy: {{ .Values.registry.imagePullPolicy }}
+{{ if .Values.env }}
+        env:
+{{ toYaml .Values.env | indent 8 }}
+{{ end }}
+        args:
+        - -config=/config/config.yaml
+        - -cert=/config/server.crt
+        - -key=/config/server.key
+{{ if .Values.args }}
+{{ toYaml .Values.args | indent 8 }}
+{{ end }}
+        ports:
+        - containerPort: 8443
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /ready
+            port: 8443
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /healthz
+            port: 8443
+          initialDelaySeconds: 10
+          periodSeconds: 10

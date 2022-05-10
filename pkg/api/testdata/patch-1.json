@@ -1,0 +1,1 @@
+[{"op":"add","path":"/spec/containers/0/env","value":[{"name":"TEST_ENV_VAR","value":"test-value"}]},{"op":"add","path":"/spec/containers/0/resources","value":{"limits":{"memory":"500Mi"},"requests":{"cpu":"100m","memory":"500Mi"}}},{"op":"add","path":"/metadata/annotations","value":{"pod-admission-controller/injected":"true"}}]

@@ -1,0 +1,1 @@
+{"pod-admission-controller/ignoreAddDefaultResources":"test-1,test-3","pod-admission-controller/ignoreEnv":"test-4","pod-admission-controller/ignoreRunAsNonRoot":"test-2,test-3","pod-admission-controller/injected":"true"}

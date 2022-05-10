@@ -1,0 +1,33 @@
+release:
+  footer: |
+    ## Docker Images
+    - `paskalmaksim/pod-admission-controller:latest`
+    - `paskalmaksim/pod-admission-controller:{{ .Tag }}`
+dockers:
+- goos: linux
+  goarch: amd64
+  image_templates:
+  - paskalmaksim/pod-admission-controller:latest
+  - paskalmaksim/pod-admission-controller:{{ .Tag }}
+builds:
+- dir: ./cmd/
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  ldflags:
+  - -X github.com/maksim-paskal/pod-admission-controller/pkg/config.gitVersion={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
+  goos:
+  - linux
+  goarch:
+  - amd64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'

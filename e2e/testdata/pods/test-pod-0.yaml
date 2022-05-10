@@ -1,0 +1,35 @@
+# pod that ignores to mutation
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: test-pod-admission-controller
+  annotations:
+    pod-admission-controller/ignore: "true"
+  name: test-pod-0
+spec:
+  terminationGracePeriodSeconds: 0
+  securityContext:
+    runAsUser: 1001
+  initContainers:
+  # init containers must be unchanged
+  - name: test-init-0
+    image: alpine:latest
+    securityContext:
+      runAsUser: 1002
+    command:
+    - echo
+    - ok
+  containers:
+  - name: test-0
+    image: alpine:latest
+    command:
+    - sleep
+    - 1d
+    env:
+    - name: TEST0
+      value: test0
+    resources:
+      requests:
+        cpu: 10m
+        memory: 10Mi

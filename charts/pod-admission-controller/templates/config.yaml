@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  server.crt: |
+{{ .Values.certificates.serverCrt | nindent 5 }}
+  server.key: |
+{{ .Values.certificates.serverKey | nindent 5 }}
+  config.yaml: |
+{{ .Values.config | indent 5 }}
