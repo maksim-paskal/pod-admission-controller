@@ -13,6 +13,7 @@ limitations under the License.
 package internal
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/api"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/sentry"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/utils"
@@ -32,6 +34,8 @@ import (
 const serverTimeout = 5 * time.Second
 
 func Start() error {
+	ctx := context.Background()
+
 	log.Infof("Starting %s...", config.GetVersion())
 
 	if err := CheckConfigRules(); err != nil {
@@ -47,6 +51,16 @@ func Start() error {
 		return errors.Wrap(err, "can not load certificates")
 	}
 
+	go startServerTLS(sCert)
+	go startMetricsServer()
+
+	<-ctx.Done()
+
+	return nil
+}
+
+// start webhook server.
+func startServerTLS(sCert tls.Certificate) {
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", *config.Get().Port),
 		Handler:      web.GetHandler(),
@@ -60,11 +74,29 @@ func Start() error {
 
 	log.Infof("Listening on address %s", server.Addr)
 
-	if err = server.ListenAndServeTLS("", ""); err != nil {
-		return errors.Wrap(err, "can not start server")
+	if err := server.ListenAndServeTLS("", ""); err != nil {
+		log.WithError(err).Fatal("Failed to start tls server")
+	}
+}
+
+// start metrics server.
+func startMetricsServer() {
+	mux := http.NewServeMux()
+
+	mux.Handle("/metrics", metrics.GetHandler())
+
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%d", *config.Get().MetricsPort),
+		Handler:      mux,
+		ReadTimeout:  serverTimeout,
+		WriteTimeout: serverTimeout,
 	}
 
-	return nil
+	log.Infof("Listening metrics on address %s", server.Addr)
+
+	if err := server.ListenAndServe(); err != nil {
+		log.WithError(err).Fatal("Failed to start metrics server")
+	}
 }
 
 // check config for templating errors.
