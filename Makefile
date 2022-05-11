@@ -47,6 +47,7 @@ sslInit:
 	pod-admission-controller.pod-admission-controller.svc.cluster.local
 
 build:
+	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot --skip-validate
 	mv ./dist/pod-admission-controller_linux_amd64_v1/pod-admission-controller pod-admission-controller
 	docker build --pull . -t $(image)

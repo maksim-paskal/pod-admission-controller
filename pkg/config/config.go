@@ -24,6 +24,7 @@ import (
 
 const (
 	defaultPort                    = 8443
+	defaultMetricsPort             = 31080
 	defaultContainerResourceCPU    = "100m"
 	defaultContainerResourceMemory = "500Mi"
 )
@@ -34,6 +35,7 @@ type Params struct {
 	LogLevel             *string
 	LogPretty            *bool
 	Port                 *int
+	MetricsPort          *int
 	CertFile             *string
 	KeyFile              *string
 	Rules                []types.Rule
@@ -49,6 +51,7 @@ var param = Params{
 	LogLevel:             flag.String("log.level", "INFO", "log level"),
 	LogPretty:            flag.Bool("log.pretty", false, "print log in pretty format"),
 	Port:                 flag.Int("port", defaultPort, "port to listen on"),
+	MetricsPort:          flag.Int("metrics.port", defaultMetricsPort, "port to listen on metrics"),
 	CertFile:             flag.String("cert", "server.crt", "certificate file"),
 	KeyFile:              flag.String("key", "server.key", "key file"),
 	DefaultRequestCPU:    flag.String("adddefaultresources.cpu", defaultContainerResourceCPU, "default cpu resources"),

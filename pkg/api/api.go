@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/template"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
@@ -29,26 +30,57 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
 	runtimeScheme = runtime.NewScheme()
 	codecs        = serializer.NewCodecFactory(runtimeScheme)
 	deserializer  = codecs.UniversalDeserializer()
+	Clientset     *kubernetes.Clientset
+	Restconfig    *rest.Config
 )
+
+func Init() error {
+	var err error
+
+	if len(*config.Get().KubeConfigFile) > 0 {
+		Restconfig, err = clientcmd.BuildConfigFromFlags("", *config.Get().KubeConfigFile)
+		if err != nil {
+			return errors.Wrap(err, "error in clientcmd.BuildConfigFromFlags")
+		}
+	} else {
+		log.Debug("No kubeconfig file use incluster")
+		Restconfig, err = rest.InClusterConfig()
+		if err != nil {
+			return errors.Wrap(err, "error in rest.InClusterConfig")
+		}
+	}
+
+	Clientset, err = kubernetes.NewForConfig(Restconfig)
+	if err != nil {
+		log.WithError(err).Fatal()
+	}
+
+	return nil
+}
 
 func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse { //nolint:funlen,cyclop,lll
 	req := requestedAdmissionReview.Request
 
 	var pod corev1.Pod
 	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
-		return mutateError(err)
+		return mutateError(namespace.Name, err)
 	}
 
 	// some pods does not need mutation
 	// pod-admission-controller/ignore=true
 	if ignore, ok := pod.Annotations[types.AnnotationIgnore]; ok {
 		if strings.EqualFold(ignore, "true") {
+			metrics.MutationsIgnored.WithLabelValues(namespace.Name).Inc()
+
 			return &admissionv1.AdmissionResponse{
 				Allowed:  true,
 				Warnings: []string{types.WarningPodDoedNotNeedMutation},
@@ -74,7 +106,7 @@ func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.A
 		for _, rule := range config.Get().Rules {
 			match, err := utils.CheckConditions(containerInfo, rule.Conditions)
 			if err != nil {
-				return mutateError(err)
+				return mutateError(namespace.Name, err)
 			}
 
 			if match {
@@ -90,7 +122,7 @@ func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.A
 		// get all formatted envs
 		formattedEnv, err := FormatEnv(containerInfo, containerInfo.GetSelectedRulesEnv())
 		if err != nil {
-			return mutateError(err)
+			return mutateError(namespace.Name, err)
 		}
 
 		// create env patch if env is not empty
@@ -132,12 +164,14 @@ func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.A
 
 	patchBytes, err := json.Marshal(mutationPatch)
 	if err != nil {
-		return mutateError(err)
+		return mutateError(namespace.Name, err)
 	}
 
 	log.Infof("mutate %s/%s", req.Namespace, req.UID)
 
 	log.Debugf("patch=%s", string(patchBytes))
+
+	metrics.MutationsTotal.WithLabelValues(namespace.Name).Inc()
 
 	return &admissionv1.AdmissionResponse{
 		Allowed: true,
@@ -153,8 +187,10 @@ func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.A
 	}
 }
 
-func mutateError(err error) *admissionv1.AdmissionResponse {
+func mutateError(namespaceName string, err error) *admissionv1.AdmissionResponse {
 	log.WithError(err).Error("Error mutating")
+
+	metrics.MutationsError.WithLabelValues(namespaceName).Inc()
 
 	return &admissionv1.AdmissionResponse{
 		Result: &metav1.Status{

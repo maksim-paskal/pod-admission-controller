@@ -10,31 +10,39 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package web_test
+package metrics_test
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/maksim-paskal/pod-admission-controller/pkg/web"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 )
 
 var (
 	client = &http.Client{}
-	ts     = httptest.NewServer(web.GetHandler())
+	ts     = httptest.NewServer(metrics.GetHandler())
 	ctx    = context.Background()
 )
 
-func TestHealthz(t *testing.T) {
+func TestMetricsInc(t *testing.T) {
 	t.Parallel()
 
-	url := fmt.Sprintf("%s/healthz", ts.URL)
+	metrics.MutationsTotal.WithLabelValues("test").Inc()
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func TestMetricsHandler(t *testing.T) {
+	t.Parallel()
+
+	// wait for server
+	time.Sleep(time.Second)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,17 +52,13 @@ func TestHealthz(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatal("status not ok")
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 
-	if m := "ok"; string(body) != m {
-		t.Fatal("not correct response")
+	if m := "pod_admission_controller_mutations_total"; !strings.Contains(string(body), m) {
+		t.Fatalf("no metric %s found", m)
 	}
 }
