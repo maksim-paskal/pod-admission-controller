@@ -15,7 +15,6 @@ package template
 import (
 	"bytes"
 	"regexp"
-	"strings"
 	"text/template"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/sentry"
@@ -38,10 +37,8 @@ func Get(containerInfo types.ContainerInfo, value string) (string, error) {
 			return slice[part]
 		},
 		// return sentry DSN based on image name
-		"GetSentryDSN": func(image string) string {
-			formatedImage := strings.ReplaceAll(image, "/", "-")
-
-			if dsn, ok := sentry.GetCache()[formatedImage]; ok {
+		"GetSentryDSN": func(projectSlug string) string {
+			if dsn, ok := sentry.GetCache()[projectSlug]; ok {
 				return dsn
 			}
 

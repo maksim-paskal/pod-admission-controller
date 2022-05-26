@@ -19,8 +19,6 @@ spec:
         app: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ .Release.Name }}
-      securityContext:
-        runAsNonRoot: true
 {{ if .Values.tolerations }}
       tolerations:
 {{ toYaml .Values.tolerations | nindent 6 }}
@@ -43,6 +41,16 @@ spec:
       - name: {{ .Release.Name }}
         image: {{ .Values.registry.image }}
         imagePullPolicy: {{ .Values.registry.imagePullPolicy }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 30626
+          runAsGroup: 30626
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
 {{ if .Values.env }}
         env:
 {{ toYaml .Values.env | indent 8 }}

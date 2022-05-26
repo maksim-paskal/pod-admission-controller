@@ -88,7 +88,7 @@ func TestCreateDefaultResourcesPatch(t *testing.T) {
 			Enabled: true,
 		},
 	}
-	patch := patch.CreateDefaultResourcesPatch(rule, 0, types.ContainerInfo{}, resources)
+	patch := patch.CreateDefaultResourcesPatch(&rule, 0, types.ContainerInfo{}, resources)
 
 	if len(patch) != 1 {
 		t.Fatal("1 patch must be created")
@@ -111,7 +111,7 @@ func TestCreateRunAsNonRootPatch(t *testing.T) {
 	podSecurityContext := corev1.PodSecurityContext{}
 	securityContext := corev1.SecurityContext{}
 
-	patch := patch.CreateRunAsNonRootPatch(rule, 0, types.ContainerInfo{}, &podSecurityContext, &securityContext)
+	patch := patch.CreateRunAsNonRootPatch(&rule, 0, types.ContainerInfo{}, &podSecurityContext, &securityContext)
 
 	if len(patch) != 1 {
 		t.Fatal("1 patch must be created")

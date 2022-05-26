@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"time"
 
+	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/api"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
@@ -35,6 +36,17 @@ const serverTimeout = 5 * time.Second
 
 func Start() error {
 	ctx := context.Background()
+
+	hook, err := logrushooksentry.NewHook(logrushooksentry.Options{
+		SentryDSN: *config.Get().SentryDSN,
+		Release:   config.GetVersion(),
+	})
+	if err != nil {
+		log.WithError(err).Error()
+	}
+
+	log.AddHook(hook)
+	defer hook.Stop()
 
 	log.Infof("Starting %s...", config.GetVersion())
 
@@ -102,7 +114,9 @@ func startMetricsServer() {
 // check config for templating errors.
 func CheckConfigRules() error {
 	for _, containerConfig := range config.Get().Rules {
-		containerInfo := types.ContainerInfo{}
+		containerInfo := types.ContainerInfo{
+			Image: &types.ContainerImage{},
+		}
 
 		_, err := utils.CheckConditions(containerInfo, containerConfig.Conditions)
 		if err != nil {

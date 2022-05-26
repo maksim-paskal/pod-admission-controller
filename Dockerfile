@@ -3,11 +3,11 @@ FROM alpine:latest
 WORKDIR /app/
 
 RUN apk upgrade \
-&& addgroup -g 101 -S app \
-&& adduser -u 101 -D -S -G app app
+&& addgroup -g 30626 -S app \
+&& adduser -u 30626 -D -S -G app app
 
 COPY ./pod-admission-controller /app/pod-admission-controller
 
-USER 101
+USER 30626
 
 ENTRYPOINT [ "/app/pod-admission-controller" ]

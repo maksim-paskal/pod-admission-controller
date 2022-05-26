@@ -22,7 +22,7 @@ e2e:
 	kubectl create ns $(testnamespace)
 	kubectl label ns $(testnamespace) environment=dev
 	kubectl -n $(testnamespace) apply -f ./e2e/testdata/pods
-	kubectl -n $(testnamespace) wait --for=condition=Ready=true pods -lapp=test-pod-admission-controller
+	kubectl -n $(testnamespace) wait --for=condition=Ready=true pods -lapp=test-pod-admission-controller --timeout=600s
 	go test --race ./e2e -kubeconfig=$(KUBECONFIG)
 	kubectl delete ns $(testnamespace)
 
@@ -30,7 +30,7 @@ testChart:
 	ct lint --charts ./charts/pod-admission-controller
 
 run:
-	go run ./cmd \
+	go run --race ./cmd \
 	-log.level=debug \
 	-log.pretty \
 	-kubeconfig=$(KUBECONFIG) \
@@ -59,6 +59,8 @@ restart:
 	kubectl -n pod-admission-controller rollout restart deploy pod-admission-controller
 
 deploy:
+	kubectl -n pod-admission-controller scale deploy --all --replicas=0 || true
+	
 	helm upgrade pod-admission-controller \
 	--install \
 	--namespace pod-admission-controller \
@@ -67,7 +69,7 @@ deploy:
 	--set registry.image=paskalmaksim/pod-admission-controller:dev \
 	--set registry.imagePullPolicy=Always \
 	--set-file config=$(config)
-	kubectl -n pod-admission-controller wait pod --for=condition=ready --all
+	kubectl -n pod-admission-controller wait pod --for=condition=ready --all --timeout=600s
 
 clean:
 	helm uninstall pod-admission-controller --namespace pod-admission-controller || true

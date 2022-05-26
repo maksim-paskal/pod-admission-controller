@@ -31,7 +31,7 @@ const (
 	// list of containers that should be skipped from AddDefaultResources.
 	AnnotationIgnoreAddDefaultResources = annotationPrefix + "/ignoreAddDefaultResources"
 	// warning when AnnotationIgnore is enabled.
-	WarningPodDoedNotNeedMutation = annotationPrefix + ". POD does not need mutation"
+	WarningPodDoedNotNeedMutation = annotationPrefix + ": POD ignore mutation by annotation " + AnnotationIgnore
 	// warning when no patch is generated.
 	WarningNoPatchGenerated = annotationPrefix + ". No patches found for pod"
 )
@@ -73,15 +73,21 @@ type Conditions struct {
 	Value    string
 }
 
+type ContainerImage struct {
+	Name string
+	Slug string
+	Tag  string
+}
+
 type ContainerInfo struct {
 	ContainerName        string
 	Namespace            string
 	NamespaceAnnotations map[string]string
 	NamespaceLabels      map[string]string
-	Image                string
+	Image                *ContainerImage
 	PodAnnotations       map[string]string
 	PodLabels            map[string]string
-	SelectedRules        []Rule
+	SelectedRules        []*Rule
 }
 
 // return JSON representation of the container info.
@@ -120,7 +126,7 @@ const (
 	SelectedRuleAddDefaultResources = SelectedRuleType("AddDefaultResources")
 )
 
-func (c *ContainerInfo) GetSelectedRuleEnabled(ruleType SelectedRuleType) (Rule, bool) {
+func (c *ContainerInfo) GetSelectedRuleEnabled(ruleType SelectedRuleType) (*Rule, bool) {
 	for _, selectedRule := range c.SelectedRules {
 		switch ruleType {
 		case SelectedRuleRunAsNonRoot:
@@ -134,5 +140,5 @@ func (c *ContainerInfo) GetSelectedRuleEnabled(ruleType SelectedRuleType) (Rule,
 		}
 	}
 
-	return Rule{}, false
+	return &Rule{}, false
 }

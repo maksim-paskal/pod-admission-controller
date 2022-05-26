@@ -50,7 +50,7 @@ func TestGetSelectedRuleEnabled(t *testing.T) { //nolint:funlen
 	t.Parallel()
 
 	containerInfo := types.ContainerInfo{
-		SelectedRules: []types.Rule{
+		SelectedRules: []*types.Rule{
 			{
 				Name: "test1",
 			},
@@ -96,13 +96,13 @@ func TestGetSelectedRuleEnabled(t *testing.T) { //nolint:funlen
 	}
 
 	// invalid rule
-	selectedRule, ok = containerInfo.GetSelectedRuleEnabled("fake")
+	_, ok = containerInfo.GetSelectedRuleEnabled("fake")
 	if ok {
 		t.Fatal("expected not to find selected rule")
 	}
 
 	containerInfo = types.ContainerInfo{
-		SelectedRules: []types.Rule{
+		SelectedRules: []*types.Rule{
 			{
 				Name: "test1",
 			},
@@ -128,7 +128,7 @@ func TestGetSelectedRulesEnv(t *testing.T) {
 	t.Parallel()
 
 	containerInfo := types.ContainerInfo{
-		SelectedRules: []types.Rule{
+		SelectedRules: []*types.Rule{
 			{
 				Env: []corev1.EnvVar{
 					{
