@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -101,9 +101,9 @@ func compareObject(obj interface{}, podOrder int, filePath string) error {
 
 	jsonPath := fmt.Sprintf("requirements/Pods/%d/%s.json", podOrder, filePath)
 
-	requireEnvByte, err := ioutil.ReadFile(jsonPath)
+	requireEnvByte, err := os.ReadFile(jsonPath)
 	if err != nil {
-		return errors.Wrap(err, "error in ioutil.ReadFile")
+		return errors.Wrap(err, "error in os.ReadFile")
 	}
 
 	in := strings.TrimSpace(string(requireEnvByte))
@@ -112,9 +112,9 @@ func compareObject(obj interface{}, podOrder int, filePath string) error {
 	if in != out {
 		// write updated requirements
 		if *updateRequirements {
-			err := ioutil.WriteFile(jsonPath, objOut, 0)
+			err := os.WriteFile(jsonPath, objOut, 0)
 			if err != nil {
-				return errors.Wrap(err, "error in ioutil.WriteFile")
+				return errors.Wrap(err, "error in os.WriteFile")
 			}
 
 			return nil

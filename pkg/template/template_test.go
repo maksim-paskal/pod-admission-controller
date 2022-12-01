@@ -23,16 +23,16 @@ func TestTemplateValue(t *testing.T) {
 	t.Parallel()
 
 	containerInfo := types.ContainerInfo{
-		Image: "/a/b/c/d:e",
+		Image: &types.ContainerImage{Name: "/a/b/c/d:e"},
 	}
 
 	cases := make(map[string]string)
 
-	cases[`{{ index (regexp "/(.+):(.+)$" .Image) 2 }}`] = "e"
-	cases[`{{ GetSentryDSN (index (regexp "/(.+):(.+)$" .Image) 1) }}`] = ""
+	cases[`{{ index (regexp "/(.+):(.+)$" .Image.Name) 2 }}`] = "e"
+	cases[`{{ GetSentryDSN (index (regexp "/(.+):(.+)$" .Image.Name) 1) }}`] = ""
 	cases[`{{ index (regexp "/(.+):(.+)$" "/1/2/3/4:main") 2 }}`] = "main"
 	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" "/1/2/3/4:main") 3 }}`] = "unknown"
-	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" .Image) 2 }}`] = "e"
+	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" .Image.Name) 2 }}`] = "e"
 
 	for k, v := range cases {
 		value, err := template.Get(containerInfo, k)

@@ -13,10 +13,11 @@ limitations under the License.
 package sentry_test
 
 import (
+	"context"
 	"flag"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/sentry"
@@ -34,7 +35,7 @@ func GetHandler() http.Handler {
 }
 
 func projects(w http.ResponseWriter, r *http.Request) {
-	projectsByte, err := ioutil.ReadFile("testdata/projects.json")
+	projectsByte, err := os.ReadFile("testdata/projects.json")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -45,7 +46,7 @@ func projects(w http.ResponseWriter, r *http.Request) {
 }
 
 func projectkey(w http.ResponseWriter, r *http.Request) {
-	projectsByte, err := ioutil.ReadFile("testdata/projectkey.json")
+	projectsByte, err := os.ReadFile("testdata/projectkey.json")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -62,7 +63,9 @@ func TestAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	projects, err := sentry.GetProjects()
+	ctx := context.Background()
+
+	projects, err := sentry.GetProjects(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +81,7 @@ func TestAPI(t *testing.T) {
 		Slug: "test-project",
 	}
 
-	projectkey, err := sentry.GetProjectKeys(project)
+	projectkey, err := sentry.GetProjectKeys(ctx, project)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -16,7 +16,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestFormatEnv(t *testing.T) {
 	containerEnv := []corev1.EnvVar{
 		{
 			Name:  "TEST1",
-			Value: `{{ index (regexp "/(.+):(.+)$" .Image) 1 }}`,
+			Value: `{{ index (regexp "/(.+):(.+)$" .Image.Name) 1 }}`,
 		},
 		{
 			Name:  "TEST2",
@@ -51,7 +52,7 @@ func TestFormatEnv(t *testing.T) {
 	}
 
 	containerInfo := types.ContainerInfo{
-		Image:           "/1/2/3:4",
+		Image:           &types.ContainerImage{Name: "/1/2/3:4"},
 		NamespaceLabels: map[string]string{"app": "testapp"},
 	}
 
@@ -98,7 +99,8 @@ func TestMutation(t *testing.T) { //nolint:funlen
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name: "test",
+					Name:  "test",
+					Image: "test/test:test",
 				},
 			},
 		},
@@ -109,7 +111,8 @@ func TestMutation(t *testing.T) { //nolint:funlen
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name: "test-adddefaultresources",
+					Name:  "test-adddefaultresources",
+					Image: "test/test:test",
 				},
 			},
 		},
@@ -120,7 +123,8 @@ func TestMutation(t *testing.T) { //nolint:funlen
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name: "test-runasnonroot",
+					Name:  "test-runasnonroot",
+					Image: "test/test:test",
 				},
 			},
 		},
@@ -145,12 +149,12 @@ func TestMutation(t *testing.T) { //nolint:funlen
 		response := api.Mutate(&namespace, &requestedAdmissionReview)
 
 		if response.Result.Status != "Success" {
-			t.Fatal("status must be Success")
+			t.Fatalf("status must be Success, got %s, %s", response.Result.Status, response.Result.Message)
 		}
 
 		jsonPath := fmt.Sprintf("testdata/patch-%d.json", podIndex)
 
-		requireByte, err := ioutil.ReadFile(jsonPath)
+		requireByte, err := os.ReadFile(jsonPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,7 +162,55 @@ func TestMutation(t *testing.T) { //nolint:funlen
 		in := strings.TrimSpace(string(requireByte))
 
 		if in != string(response.Patch) {
-			t.Fatalf("must be equal\n\nin=(%s)\n\nout=(%s)", in, string(response.Patch))
+			t.Fatalf("%s,must be equal\n\nin=(%s)\n\nout=(%s)", jsonPath, in, string(response.Patch))
+		}
+	}
+}
+
+func TestGetImageInfo(t *testing.T) {
+	t.Parallel()
+
+	tests := make(map[string]*types.ContainerImage)
+
+	tests["10.10.10.10:5000/product/main/backend:release-20220516-1"] = &types.ContainerImage{
+		Name: "10.10.10.10:5000/product/main/backend:release-20220516-1",
+		Slug: "product-main-backend",
+		Tag:  "release-20220516-1",
+	}
+	tests["10.10.10.10:5000/product/main/front:release-20220516-1"] = &types.ContainerImage{
+		Name: "10.10.10.10:5000/product/main/front:release-20220516-1",
+		Slug: "product-main-front",
+		Tag:  "release-20220516-1",
+	}
+	tests["domain.com/hipages/php-fpm_exporter:1"] = &types.ContainerImage{
+		Name: "domain.com/hipages/php-fpm_exporter:1",
+		Slug: "hipages-php-fpm-exporter",
+		Tag:  "1",
+	}
+	tests["domain.com/paskalmaksim/envoy-docker-image:v0.3.8"] = &types.ContainerImage{
+		Name: "domain.com/paskalmaksim/envoy-docker-image:v0.3.8",
+		Slug: "paskalmaksim-envoy-docker-image",
+		Tag:  "v0.3.8",
+	}
+	tests["paskalmaksim/envoy-docker-image:v0.3.8"] = &types.ContainerImage{
+		Name: "paskalmaksim/envoy-docker-image:v0.3.8",
+		Slug: "paskalmaksim-envoy-docker-image",
+		Tag:  "v0.3.8",
+	}
+	tests["paskalmaksim/envoy-docker-image"] = &types.ContainerImage{
+		Name: "paskalmaksim/envoy-docker-image",
+		Slug: "paskalmaksim-envoy-docker-image",
+		Tag:  "latest",
+	}
+
+	for test, requre := range tests {
+		formattedImage, err := api.GetImageInfo(test)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(requre, formattedImage) {
+			t.Fatalf("must be %s, got %s", requre, formattedImage)
 		}
 	}
 }

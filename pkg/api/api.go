@@ -15,8 +15,10 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strings"
 
+	"github.com/distribution/distribution/v3/reference"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch"
@@ -43,6 +45,7 @@ var (
 	Restconfig    *rest.Config
 )
 
+// get kubernetes client.
 func Init() error {
 	var err error
 
@@ -67,6 +70,7 @@ func Init() error {
 	return nil
 }
 
+// mutate pod.
 func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse { //nolint:funlen,cyclop,lll
 	req := requestedAdmissionReview.Request
 
@@ -93,14 +97,20 @@ func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.A
 	for order, container := range pod.Spec.Containers {
 		containerInfo := types.ContainerInfo{
 			ContainerName:        container.Name,
-			Image:                container.Image,
 			Namespace:            namespace.Name,
 			NamespaceAnnotations: namespace.Annotations,
 			NamespaceLabels:      namespace.Labels,
 			PodAnnotations:       pod.Annotations,
 			PodLabels:            pod.Labels,
-			SelectedRules:        []types.Rule{},
+			SelectedRules:        []*types.Rule{},
 		}
+
+		imageInfo, err := GetImageInfo(container.Image)
+		if err != nil {
+			return mutateError(namespace.Name, err)
+		}
+
+		containerInfo.Image = imageInfo
 
 		// check rule that corresponds to container
 		for _, rule := range config.Get().Rules {
@@ -187,6 +197,7 @@ func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.A
 	}
 }
 
+// throw mutaion errors.
 func mutateError(namespaceName string, err error) *admissionv1.AdmissionResponse {
 	log.WithError(err).Error("Error mutating")
 
@@ -200,7 +211,8 @@ func mutateError(namespaceName string, err error) *admissionv1.AdmissionResponse
 	}
 }
 
-func ParseRequest(body []byte) ([]byte, error) {
+// parse http request.
+func ParseRequest(ctx context.Context, body []byte) ([]byte, error) {
 	obj, gvk, err := deserializer.Decode(body, nil, &admissionv1.AdmissionReview{})
 	if err != nil {
 		return nil, errors.Wrap(err, "Request could not be decoded")
@@ -213,7 +225,7 @@ func ParseRequest(body []byte) ([]byte, error) {
 		return nil, errors.Errorf("Expected v1.AdmissionReview but got: %T", obj)
 	}
 
-	namespace, err := Clientset.CoreV1().Namespaces().Get(context.Background(), requestedAdmissionReview.Request.Namespace, metav1.GetOptions{}) //nolint:lll
+	namespace, err := Clientset.CoreV1().Namespaces().Get(ctx, requestedAdmissionReview.Request.Namespace, metav1.GetOptions{}) //nolint:lll
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not get namespace")
 	}
@@ -232,6 +244,7 @@ func ParseRequest(body []byte) ([]byte, error) {
 	return respBytes, nil
 }
 
+// template values in container environment variables.
 func FormatEnv(containerInfo types.ContainerInfo, containersEnv []corev1.EnvVar) ([]corev1.EnvVar, error) {
 	var err error
 
@@ -249,4 +262,31 @@ func FormatEnv(containerInfo types.ContainerInfo, containersEnv []corev1.EnvVar)
 	}
 
 	return formattedEnv, nil
+}
+
+// parse image to repo, slug path and tag.
+func GetImageInfo(image string) (*types.ContainerImage, error) {
+	// check if image is has fully qualified name
+	refName, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error parsing image name %s", image)
+	}
+
+	// get only lowered the image name
+	imageName := strings.ToLower(reference.Path(refName))
+
+	// replace all non alphanumeric characters with a dash
+	imageName = regexp.MustCompile("[^A-Za-z0-9]+").ReplaceAllString(imageName, "-")
+
+	result := types.ContainerImage{
+		Name: image,
+		Slug: strings.Trim(imageName, "-"),
+		Tag:  "latest",
+	}
+
+	if tag, ok := refName.(reference.Tagged); ok {
+		result.Tag = tag.Tag()
+	}
+
+	return &result, nil
 }

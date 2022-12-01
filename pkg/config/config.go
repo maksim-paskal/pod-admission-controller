@@ -14,7 +14,7 @@ package config
 
 import (
 	"flag"
-	"io/ioutil"
+	"os"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
@@ -38,11 +38,12 @@ type Params struct {
 	MetricsPort          *int
 	CertFile             *string
 	KeyFile              *string
-	Rules                []types.Rule
+	Rules                []*types.Rule
 	DefaultRequestCPU    *string
 	DefaultRequestMemory *string
 	SentryEndpoint       *string
 	SentryToken          *string
+	SentryDSN            *string
 }
 
 var param = Params{
@@ -58,6 +59,7 @@ var param = Params{
 	DefaultRequestMemory: flag.String("addefaultresources.memory", defaultContainerResourceMemory, "default memory resources"), //nolint:lll
 	SentryEndpoint:       flag.String("sentry.endpoint", "", "sentry endpoint"),
 	SentryToken:          flag.String("sentry.token", "", "sentry token"),
+	SentryDSN:            flag.String("sentry.dsn", os.Getenv("SENTRY_DSN"), "sentry DSN for error reporting"),
 }
 
 func Get() *Params {
@@ -69,9 +71,9 @@ func Load() error {
 		return nil
 	}
 
-	configByte, err := ioutil.ReadFile(*param.ConfigFile)
+	configByte, err := os.ReadFile(*param.ConfigFile)
 	if err != nil {
-		return errors.Wrap(err, "error in ioutil.ReadFile")
+		return errors.Wrap(err, "error in os.ReadFile")
 	}
 
 	err = yaml.Unmarshal(configByte, &param)
