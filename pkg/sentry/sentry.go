@@ -13,6 +13,7 @@ limitations under the License.
 package sentry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -53,7 +54,7 @@ func GetCache() map[string]string {
 	return cache
 }
 
-func CreateCache() error {
+func CreateCache(ctx context.Context) error {
 	if len(*config.Get().SentryEndpoint) == 0 || len(*config.Get().SentryToken) == 0 {
 		return nil
 	}
@@ -62,13 +63,13 @@ func CreateCache() error {
 
 	cache = make(map[string]string)
 
-	projects, err := GetProjects()
+	projects, err := GetProjects(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to get projects")
 	}
 
 	for _, project := range projects {
-		keys, err := GetProjectKeys(project)
+		keys, err := GetProjectKeys(ctx, project)
 		if err != nil {
 			return errors.Wrap(err, "failed to get keys")
 		}
@@ -81,8 +82,8 @@ func CreateCache() error {
 	return nil
 }
 
-func GetProjects() ([]Project, error) {
-	req, err := rawRequest(http.MethodGet, "/api/0/projects/")
+func GetProjects(ctx context.Context) ([]Project, error) {
+	req, err := rawRequest(ctx, http.MethodGet, "/api/0/projects/")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request")
 	}
@@ -105,10 +106,10 @@ func GetProjects() ([]Project, error) {
 	return projects, errors.Wrap(err, "failed to decode response")
 }
 
-func GetProjectKeys(project Project) ([]Key, error) {
+func GetProjectKeys(ctx context.Context, project Project) ([]Key, error) {
 	url := fmt.Sprintf("/api/0/projects/%s/%s/keys/", project.Organization.Slug, project.Slug)
 
-	req, err := rawRequest(http.MethodGet, url)
+	req, err := rawRequest(ctx, http.MethodGet, url)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request")
 	}
@@ -133,12 +134,12 @@ func GetProjectKeys(project Project) ([]Key, error) {
 	return keys, errors.Wrap(err, "failed to decode response")
 }
 
-func rawRequest(method string, path string) (*http.Request, error) {
+func rawRequest(ctx context.Context, method string, path string) (*http.Request, error) {
 	endpoint := fmt.Sprintf("%s%s", strings.TrimRight(*config.Get().SentryEndpoint, "/"), path)
 
 	log.Debugf("Sending request to: %s", endpoint)
 
-	req, err := http.NewRequest(method, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, method, endpoint, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request")
 	}

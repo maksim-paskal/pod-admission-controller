@@ -27,12 +27,12 @@ func TestCheckConditionsImageEqual(t *testing.T) {
 	conditions := make([]types.Conditions, 0)
 
 	conditions = append(conditions, types.Conditions{
-		Key:      ".Image",
+		Key:      ".Image.Name",
 		Operator: "equal",
 		Value:    "test",
 	})
 
-	match, err := utils.CheckConditions(types.ContainerInfo{Namespace: namespace}, conditions)
+	match, err := utils.CheckConditions(types.ContainerInfo{Namespace: namespace, Image: &types.ContainerImage{Name: "fake"}}, conditions) //nolint:lll
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestCheckConditionsImageEqual(t *testing.T) {
 		t.Fatal("must be false")
 	}
 
-	match, err = utils.CheckConditions(types.ContainerInfo{Namespace: namespace, Image: "test"}, conditions)
+	match, err = utils.CheckConditions(types.ContainerInfo{Namespace: namespace, Image: &types.ContainerImage{Name: "test"}}, conditions) //nolint:lll
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestCheckConditionsImageRegexp(t *testing.T) {
 		t.Fatal("must be false")
 	}
 
-	match, err = utils.CheckConditions(types.ContainerInfo{Namespace: namespace, Image: "test"}, conditions)
+	match, err = utils.CheckConditions(types.ContainerInfo{Namespace: namespace, Image: &types.ContainerImage{Name: "test"}}, conditions) //nolint:lll
 	if err != nil {
 		t.Fatal(err)
 	}

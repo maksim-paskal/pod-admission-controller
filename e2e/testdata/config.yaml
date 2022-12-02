@@ -24,3 +24,5 @@ rules:
         fieldpath: status.hostIP
   - name: TEST_PORT
     value: "6831"
+  - name: SERVICE_NAME
+    value: "{{ .Image.Slug }}"

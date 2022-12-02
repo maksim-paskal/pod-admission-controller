@@ -14,7 +14,7 @@ package web
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/api"
@@ -44,7 +44,7 @@ func mutate(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 
 	if r.Body != nil {
-		data, err := ioutil.ReadAll(r.Body)
+		data, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.WithError(err).Error("Error reading body")
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -58,7 +58,7 @@ func mutate(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Received handleMutate %s ", string(body))
 
-	respBytes, err := api.ParseRequest(body)
+	respBytes, err := api.ParseRequest(r.Context(), body)
 	if err != nil {
 		log.WithError(err).Error()
 		http.Error(w, err.Error(), http.StatusBadRequest)

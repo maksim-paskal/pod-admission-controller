@@ -74,6 +74,32 @@ func TestCreateEnvPatchEnv(t *testing.T) {
 	}
 }
 
+func TestNullResources(t *testing.T) {
+	t.Parallel()
+
+	resources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU: resource.MustParse("1"),
+		},
+	}
+
+	rule := types.Rule{
+		AddDefaultResources: types.AddDefaultResources{
+			Enabled:         true,
+			RemoveResources: true,
+		},
+	}
+	patch := patch.CreateDefaultResourcesPatch(&rule, 0, types.ContainerInfo{}, resources)
+
+	if len(patch) != 1 {
+		t.Fatal("1 patch must be created")
+	}
+
+	if patch[0].Op != "remove" || patch[0].Path != "/spec/containers/0/resources" {
+		t.Fatalf("not corrected op %s", patch[0].Op)
+	}
+}
+
 func TestCreateDefaultResourcesPatch(t *testing.T) {
 	t.Parallel()
 
@@ -88,7 +114,7 @@ func TestCreateDefaultResourcesPatch(t *testing.T) {
 			Enabled: true,
 		},
 	}
-	patch := patch.CreateDefaultResourcesPatch(rule, 0, types.ContainerInfo{}, resources)
+	patch := patch.CreateDefaultResourcesPatch(&rule, 0, types.ContainerInfo{}, resources)
 
 	if len(patch) != 1 {
 		t.Fatal("1 patch must be created")
@@ -111,7 +137,7 @@ func TestCreateRunAsNonRootPatch(t *testing.T) {
 	podSecurityContext := corev1.PodSecurityContext{}
 	securityContext := corev1.SecurityContext{}
 
-	patch := patch.CreateRunAsNonRootPatch(rule, 0, types.ContainerInfo{}, &podSecurityContext, &securityContext)
+	patch := patch.CreateRunAsNonRootPatch(&rule, 0, types.ContainerInfo{}, &podSecurityContext, &securityContext)
 
 	if len(patch) != 1 {
 		t.Fatal("1 patch must be created")

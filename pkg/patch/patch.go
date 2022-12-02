@@ -66,7 +66,7 @@ func CreateEnvPatch(containerOrder int, containerInfo types.ContainerInfo, conta
 }
 
 // add default resources to container if not exists.
-func CreateDefaultResourcesPatch(selectedRule types.Rule, containerOrder int, containerInfo types.ContainerInfo, containerResources corev1.ResourceRequirements) []types.PatchOperation { //nolint:lll
+func CreateDefaultResourcesPatch(selectedRule *types.Rule, containerOrder int, containerInfo types.ContainerInfo, containerResources corev1.ResourceRequirements) []types.PatchOperation { //nolint:lll,funlen
 	// some containers don't need default resources
 	// pod-admission-controller/ignoreAddDefaultResources=container1,container2
 	if ignore, ok := containerInfo.GetPodAnnotation(types.AnnotationIgnoreAddDefaultResources); ok {
@@ -76,6 +76,14 @@ func CreateDefaultResourcesPatch(selectedRule types.Rule, containerOrder int, co
 				return nil
 			}
 		}
+	}
+
+	// remove pod resources from all containers
+	if selectedRule.AddDefaultResources.RemoveResources {
+		return []types.PatchOperation{{
+			Op:   "remove",
+			Path: fmt.Sprintf("/spec/containers/%d/resources", containerOrder),
+		}}
 	}
 
 	patch := make([]types.PatchOperation, 0)
@@ -123,7 +131,7 @@ func CreateDefaultResourcesPatch(selectedRule types.Rule, containerOrder int, co
 }
 
 // add RunAsNonRoot policy to all containers (exlude InitContainers).
-func CreateRunAsNonRootPatch(selectedRule types.Rule, order int, containerInfo types.ContainerInfo, podSecurityContext *corev1.PodSecurityContext, containerSecurityContext *corev1.SecurityContext) []types.PatchOperation { //nolint:lll,cyclop
+func CreateRunAsNonRootPatch(selectedRule *types.Rule, order int, containerInfo types.ContainerInfo, podSecurityContext *corev1.PodSecurityContext, containerSecurityContext *corev1.SecurityContext) []types.PatchOperation { //nolint:lll,cyclop
 	// some containers don't need security context check
 	// pod-admission-controller/ignoreRunAsNonRoot=container1,container2
 	if ignore, ok := containerInfo.GetPodAnnotation(types.AnnotationIgnoreRunAsNonRoot); ok {
