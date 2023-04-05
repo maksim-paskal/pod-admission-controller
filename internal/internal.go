@@ -15,7 +15,6 @@ package internal
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -34,9 +33,7 @@ import (
 // webhook spec timeoutSeconds.
 const serverTimeout = 5 * time.Second
 
-func Start() error {
-	ctx := context.Background()
-
+func Start(ctx context.Context) error {
 	hook, err := logrushooksentry.NewHook(logrushooksentry.Options{
 		SentryDSN: *config.Get().SentryDSN,
 		Release:   config.GetVersion(),
@@ -68,13 +65,23 @@ func Start() error {
 
 	<-ctx.Done()
 
+	log.Error("Shutting down servers...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+	defer cancel()
+
+	_ = httpServer.Shutdown(ctx)    //nolint:contextcheck
+	_ = metricsServer.Shutdown(ctx) //nolint:contextcheck
+
 	return nil
 }
 
+var httpServer, metricsServer *http.Server
+
 // start webhook server.
 func startServerTLS(sCert tls.Certificate) {
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", *config.Get().Port),
+	httpServer = &http.Server{
+		Addr:         *config.Get().Addr,
 		Handler:      web.GetHandler(),
 		ReadTimeout:  serverTimeout,
 		WriteTimeout: serverTimeout,
@@ -84,10 +91,10 @@ func startServerTLS(sCert tls.Certificate) {
 		},
 	}
 
-	log.Infof("Listening on address %s", server.Addr)
+	log.Infof("Listening on address %s", httpServer.Addr)
 
-	if err := server.ListenAndServeTLS("", ""); err != nil {
-		log.WithError(err).Fatal("Failed to start tls server")
+	if err := httpServer.ListenAndServeTLS("", ""); err != nil {
+		log.WithError(err).Fatal()
 	}
 }
 
@@ -97,17 +104,17 @@ func startMetricsServer() {
 
 	mux.Handle("/metrics", metrics.GetHandler())
 
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", *config.Get().MetricsPort),
+	metricsServer = &http.Server{
+		Addr:         *config.Get().MetricsAddr,
 		Handler:      mux,
 		ReadTimeout:  serverTimeout,
 		WriteTimeout: serverTimeout,
 	}
 
-	log.Infof("Listening metrics on address %s", server.Addr)
+	log.Infof("Listening metrics on address %s", metricsServer.Addr)
 
-	if err := server.ListenAndServe(); err != nil {
-		log.WithError(err).Fatal("Failed to start metrics server")
+	if err := metricsServer.ListenAndServe(); err != nil {
+		log.WithError(err).Fatal()
 	}
 }
 

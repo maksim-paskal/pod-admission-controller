@@ -13,8 +13,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/maksim-paskal/pod-admission-controller/internal"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/api"
@@ -24,7 +29,7 @@ import (
 
 var version = flag.Bool("version", false, "print version and exit")
 
-func main() {
+func main() { //nolint:funlen
 	flag.Parse()
 
 	if *version {
@@ -58,7 +63,32 @@ func main() {
 
 	log.Debugf("using config: %s", config.Get())
 
-	if err := internal.Start(); err != nil {
-		log.WithError(err).Fatal()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	signalChanInterrupt := make(chan os.Signal, 1)
+	signal.Notify(signalChanInterrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		log.RegisterExitHandler(func() {
+			cancel()
+			// wait before shutdown
+			time.Sleep(*config.Get().GracePeriod)
+		})
+
+		select {
+		case <-signalChanInterrupt:
+			log.Error("Got interruption signal...")
+			cancel()
+		case <-ctx.Done():
+		}
+		<-signalChanInterrupt
+		os.Exit(1)
+	}()
+
+	if err := internal.Start(ctx); err != nil {
+		log.WithError(err).Error()
 	}
+
+	log.Error("Server has stoped...")
 }
