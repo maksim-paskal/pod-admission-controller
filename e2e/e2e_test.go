@@ -34,7 +34,10 @@ const (
 	podNamesPrefix = "test-pod-"
 )
 
-var updateRequirements = flag.Bool("updateRequirements", false, "update requirements")
+var (
+	updateRequirements = flag.Bool("updateRequirements", false, "update requirements")
+	ctx                = context.Background()
+)
 
 func Test(t *testing.T) { //nolint:cyclop
 	t.Parallel()
@@ -51,7 +54,7 @@ func Test(t *testing.T) { //nolint:cyclop
 		t.Fatal(err)
 	}
 
-	pods, err := api.Clientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{
+	pods, err := api.Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app=test-pod-admission-controller",
 	})
 	if err != nil {

@@ -34,7 +34,7 @@ func GetHandler() http.Handler {
 	return mux
 }
 
-func projects(w http.ResponseWriter, r *http.Request) {
+func projects(w http.ResponseWriter, _ *http.Request) {
 	projectsByte, err := os.ReadFile("testdata/projects.json")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -45,7 +45,7 @@ func projects(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(projectsByte)
 }
 
-func projectkey(w http.ResponseWriter, r *http.Request) {
+func projectkey(w http.ResponseWriter, _ *http.Request) {
 	projectsByte, err := os.ReadFile("testdata/projectkey.json")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

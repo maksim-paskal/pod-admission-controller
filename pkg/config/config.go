@@ -15,6 +15,7 @@ package config
 import (
 	"flag"
 	"os"
+	"time"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
@@ -23,19 +24,21 @@ import (
 )
 
 const (
-	defaultPort                    = 8443
-	defaultMetricsPort             = 31080
+	defaultGracePeriod             = 30 * time.Second
+	defaultAddr                    = ":8443"
+	defaultMetricsAddr             = ":31080"
 	defaultContainerResourceCPU    = "100m"
 	defaultContainerResourceMemory = "500Mi"
 )
 
 type Params struct {
+	GracePeriod          *time.Duration
 	ConfigFile           *string
 	KubeConfigFile       *string
 	LogLevel             *string
 	LogPretty            *bool
-	Port                 *int
-	MetricsPort          *int
+	Addr                 *string
+	MetricsAddr          *string
 	CertFile             *string
 	KeyFile              *string
 	Rules                []*types.Rule
@@ -47,12 +50,13 @@ type Params struct {
 }
 
 var param = Params{
+	GracePeriod:          flag.Duration("graceperiod", defaultGracePeriod, "grace period"),
 	ConfigFile:           flag.String("config", "", "config file"),
 	KubeConfigFile:       flag.String("kubeconfig", "", "kubeconfig file"),
 	LogLevel:             flag.String("log.level", "INFO", "log level"),
 	LogPretty:            flag.Bool("log.pretty", false, "print log in pretty format"),
-	Port:                 flag.Int("port", defaultPort, "port to listen on"),
-	MetricsPort:          flag.Int("metrics.port", defaultMetricsPort, "port to listen on metrics"),
+	Addr:                 flag.String("listen", defaultAddr, "address to listen on"),
+	MetricsAddr:          flag.String("metrics.listen", defaultMetricsAddr, "address to listen on metrics"),
 	CertFile:             flag.String("cert", "server.crt", "certificate file"),
 	KeyFile:              flag.String("key", "server.key", "key file"),
 	DefaultRequestCPU:    flag.String("adddefaultresources.cpu", defaultContainerResourceCPU, "default cpu resources"),

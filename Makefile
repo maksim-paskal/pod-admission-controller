@@ -36,7 +36,9 @@ run:
 	-kubeconfig=$(KUBECONFIG) \
 	-config=$(config) \
 	-cert=./certs/server.crt \
-	-key=./certs/server.key
+	-key=./certs/server.key \
+	-listen=127.0.0.1:8443 \
+	-metrics.listen=127.0.0.1:31080
 
 sslInit:
 	rm -rf ./certs

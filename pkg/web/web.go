@@ -75,6 +75,6 @@ func mutate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func healthz(w http.ResponseWriter, r *http.Request) {
+func healthz(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprint(w, "ok")
 }
