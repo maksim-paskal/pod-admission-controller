@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/distribution/distribution/v3/reference"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/client"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch"
@@ -32,43 +33,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
 	runtimeScheme = runtime.NewScheme()
 	codecs        = serializer.NewCodecFactory(runtimeScheme)
 	deserializer  = codecs.UniversalDeserializer()
-	Clientset     *kubernetes.Clientset
-	Restconfig    *rest.Config
 )
-
-// get kubernetes client.
-func Init() error {
-	var err error
-
-	if len(*config.Get().KubeConfigFile) > 0 {
-		Restconfig, err = clientcmd.BuildConfigFromFlags("", *config.Get().KubeConfigFile)
-		if err != nil {
-			return errors.Wrap(err, "error in clientcmd.BuildConfigFromFlags")
-		}
-	} else {
-		log.Debug("No kubeconfig file use incluster")
-		Restconfig, err = rest.InClusterConfig()
-		if err != nil {
-			return errors.Wrap(err, "error in rest.InClusterConfig")
-		}
-	}
-
-	Clientset, err = kubernetes.NewForConfig(Restconfig)
-	if err != nil {
-		log.WithError(err).Fatal()
-	}
-
-	return nil
-}
 
 // mutate pod.
 func Mutate(namespace *corev1.Namespace, requestedAdmissionReview *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse { //nolint:funlen,cyclop,lll
@@ -225,7 +196,7 @@ func ParseRequest(ctx context.Context, body []byte) ([]byte, error) {
 		return nil, errors.Errorf("Expected v1.AdmissionReview but got: %T", obj)
 	}
 
-	namespace, err := Clientset.CoreV1().Namespaces().Get(ctx, requestedAdmissionReview.Request.Namespace, metav1.GetOptions{}) //nolint:lll
+	namespace, err := client.KubeClient().CoreV1().Namespaces().Get(ctx, requestedAdmissionReview.Request.Namespace, metav1.GetOptions{}) //nolint:lll
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not get namespace")
 	}

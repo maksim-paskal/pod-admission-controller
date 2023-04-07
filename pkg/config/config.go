@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	defaultGracePeriod             = 30 * time.Second
+	defaultGracePeriod             = 5 * time.Second
 	defaultAddr                    = ":8443"
 	defaultMetricsAddr             = ":31080"
 	defaultContainerResourceCPU    = "100m"

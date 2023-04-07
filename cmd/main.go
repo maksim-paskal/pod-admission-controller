@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/maksim-paskal/pod-admission-controller/internal"
-	"github.com/maksim-paskal/pod-admission-controller/pkg/api"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/client"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 	log "github.com/sirupsen/logrus"
 )
@@ -57,7 +57,7 @@ func main() { //nolint:funlen
 		log.WithError(err).Fatal()
 	}
 
-	if err := api.Init(); err != nil {
+	if err := client.Init(); err != nil {
 		log.WithError(err).Fatal()
 	}
 
@@ -87,8 +87,12 @@ func main() { //nolint:funlen
 	}()
 
 	if err := internal.Start(ctx); err != nil {
-		log.WithError(err).Error()
+		log.WithError(err).Fatal()
 	}
 
+	<-ctx.Done()
+
 	log.Error("Server has stoped...")
+
+	time.Sleep(*config.Get().GracePeriod)
 }
