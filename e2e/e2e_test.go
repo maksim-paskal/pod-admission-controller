@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maksim-paskal/pod-admission-controller/pkg/api"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/client"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -50,11 +50,11 @@ func Test(t *testing.T) { //nolint:cyclop
 		t.Fatal(err)
 	}
 
-	if err := api.Init(); err != nil {
+	if err := client.Init(); err != nil {
 		t.Fatal(err)
 	}
 
-	pods, err := api.Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+	pods, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app=test-pod-admission-controller",
 	})
 	if err != nil {

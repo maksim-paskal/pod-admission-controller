@@ -60,27 +60,15 @@ func Start(ctx context.Context) error {
 		return errors.Wrap(err, "can not load certificates")
 	}
 
-	go startServerTLS(sCert)
-	go startMetricsServer()
-
-	<-ctx.Done()
-
-	log.Error("Shutting down servers...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
-	defer cancel()
-
-	_ = httpServer.Shutdown(ctx)    //nolint:contextcheck
-	_ = metricsServer.Shutdown(ctx) //nolint:contextcheck
+	go startServerTLS(ctx, sCert)
+	go startMetricsServer(ctx)
 
 	return nil
 }
 
-var httpServer, metricsServer *http.Server
-
 // start webhook server.
-func startServerTLS(sCert tls.Certificate) {
-	httpServer = &http.Server{
+func startServerTLS(ctx context.Context, sCert tls.Certificate) {
+	server := &http.Server{
 		Addr:         *config.Get().Addr,
 		Handler:      web.GetHandler(),
 		ReadTimeout:  serverTimeout,
@@ -91,29 +79,47 @@ func startServerTLS(sCert tls.Certificate) {
 		},
 	}
 
-	log.Infof("Listening on address %s", httpServer.Addr)
+	go func() {
+		<-ctx.Done()
 
-	if err := httpServer.ListenAndServeTLS("", ""); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		defer cancel()
+
+		_ = server.Shutdown(ctx) //nolint:contextcheck
+	}()
+
+	log.Infof("Listening on address %s", server.Addr)
+
+	if err := server.ListenAndServeTLS("", ""); err != nil {
 		log.WithError(err).Fatal()
 	}
 }
 
 // start metrics server.
-func startMetricsServer() {
+func startMetricsServer(ctx context.Context) {
 	mux := http.NewServeMux()
 
 	mux.Handle("/metrics", metrics.GetHandler())
 
-	metricsServer = &http.Server{
+	server := &http.Server{
 		Addr:         *config.Get().MetricsAddr,
 		Handler:      mux,
 		ReadTimeout:  serverTimeout,
 		WriteTimeout: serverTimeout,
 	}
 
-	log.Infof("Listening metrics on address %s", metricsServer.Addr)
+	go func() {
+		<-ctx.Done()
 
-	if err := metricsServer.ListenAndServe(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		defer cancel()
+
+		_ = server.Shutdown(ctx) //nolint:contextcheck
+	}()
+
+	log.Infof("Listening metrics on address %s", server.Addr)
+
+	if err := server.ListenAndServe(); err != nil {
 		log.WithError(err).Fatal()
 	}
 }
