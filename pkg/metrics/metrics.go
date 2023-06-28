@@ -40,6 +40,18 @@ var MutationsError = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help:      "The total number of errored pod mutations",
 }, []string{"namespace"})
 
+var KubernetesAPIRequest = promauto.NewCounterVec(prometheus.CounterOpts{
+	Namespace: namespace,
+	Name:      "apiserver_request_total",
+	Help:      "The total number of kunernetes API requests",
+}, []string{"cluster", "code"})
+
+var KubernetesAPIRequestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Namespace: namespace,
+	Name:      "apiserver_request_duration",
+	Help:      "The duration in seconds of kunernetes API requests",
+}, []string{"cluster"})
+
 func GetHandler() http.Handler {
 	return promhttp.Handler()
 }

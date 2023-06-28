@@ -13,14 +13,15 @@ limitations under the License.
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"time"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 const (
@@ -101,7 +102,10 @@ func Check() error {
 }
 
 func (p *Params) String() string {
-	out, _ := yaml.Marshal(p)
+	out, err := json.Marshal(p)
+	if err != nil {
+		return err.Error()
+	}
 
 	return string(out)
 }
