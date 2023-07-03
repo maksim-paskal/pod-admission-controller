@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	defaultGracePeriod             = 5 * time.Second
+	defaultGracePeriod             = 5
 	defaultAddr                    = ":8443"
 	defaultMetricsAddr             = ":31080"
 	defaultContainerResourceCPU    = "100m"
@@ -33,7 +33,7 @@ const (
 )
 
 type Params struct {
-	GracePeriod          *time.Duration
+	GracePeriodSeconds   *int
 	ConfigFile           *string
 	KubeConfigFile       *string
 	LogLevel             *string
@@ -51,7 +51,7 @@ type Params struct {
 }
 
 var param = Params{
-	GracePeriod:          flag.Duration("graceperiod", defaultGracePeriod, "grace period"),
+	GracePeriodSeconds:   flag.Int("graceperiod", defaultGracePeriod, "grace period"),
 	ConfigFile:           flag.String("config", "", "config file"),
 	KubeConfigFile:       flag.String("kubeconfig", "", "kubeconfig file"),
 	LogLevel:             flag.String("log.level", "INFO", "log level"),
@@ -65,6 +65,10 @@ var param = Params{
 	SentryEndpoint:       flag.String("sentry.endpoint", "", "sentry endpoint"),
 	SentryToken:          flag.String("sentry.token", "", "sentry token"),
 	SentryDSN:            flag.String("sentry.dsn", os.Getenv("SENTRY_DSN"), "sentry DSN for error reporting"),
+}
+
+func (p *Params) GetGracePeriod() time.Duration {
+	return time.Duration(*p.GracePeriodSeconds) * time.Second
 }
 
 func Get() *Params {

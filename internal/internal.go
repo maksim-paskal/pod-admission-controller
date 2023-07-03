@@ -82,7 +82,7 @@ func startServerTLS(ctx context.Context, sCert tls.Certificate) {
 	go func() {
 		<-ctx.Done()
 
-		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		ctx, cancel := context.WithTimeout(context.Background(), config.Get().GetGracePeriod())
 		defer cancel()
 
 		_ = server.Shutdown(ctx) //nolint:contextcheck
@@ -111,7 +111,7 @@ func startMetricsServer(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
 
-		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		ctx, cancel := context.WithTimeout(context.Background(), config.Get().GetGracePeriod())
 		defer cancel()
 
 		_ = server.Shutdown(ctx) //nolint:contextcheck

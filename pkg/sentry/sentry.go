@@ -69,6 +69,10 @@ func CreateCache(ctx context.Context) error {
 	}
 
 	for _, project := range projects {
+		if ctx.Err() != nil {
+			return errors.Wrap(ctx.Err(), "context canceled")
+		}
+
 		keys, err := GetProjectKeys(ctx, project)
 		if err != nil {
 			return errors.Wrap(err, "failed to get keys")

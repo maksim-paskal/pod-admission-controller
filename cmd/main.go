@@ -73,7 +73,7 @@ func main() { //nolint:funlen
 		log.RegisterExitHandler(func() {
 			cancel()
 			// wait before shutdown
-			time.Sleep(*config.Get().GracePeriod)
+			time.Sleep(config.Get().GetGracePeriod())
 		})
 
 		select {
@@ -94,5 +94,5 @@ func main() { //nolint:funlen
 
 	log.Error("Server has stoped...")
 
-	time.Sleep(*config.Get().GracePeriod)
+	time.Sleep(config.Get().GetGracePeriod())
 }
