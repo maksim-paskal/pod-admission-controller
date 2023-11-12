@@ -34,6 +34,7 @@ func main() { //nolint:funlen
 
 	if *version {
 		fmt.Println(config.GetVersion()) //nolint:forbidigo
+		os.Exit(0)
 	}
 
 	if err := config.Load(); err != nil {
