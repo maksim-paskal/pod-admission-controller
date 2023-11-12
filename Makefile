@@ -50,7 +50,7 @@ sslInit:
 
 build:
 	git tag -d `git tag -l "helm-chart-*"`
-	go run github.com/goreleaser/goreleaser@latest build --clean --snapshot --skip-validate
+	go run github.com/goreleaser/goreleaser@latest build --clean --snapshot --skip=validate
 	mv ./dist/pod-admission-controller_linux_amd64_v1/pod-admission-controller pod-admission-controller
 	docker build --pull --push . -t $(image)
 
