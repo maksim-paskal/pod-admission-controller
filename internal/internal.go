@@ -34,7 +34,7 @@ import (
 const serverTimeout = 5 * time.Second
 
 func Start(ctx context.Context) error {
-	hook, err := logrushooksentry.NewHook(logrushooksentry.Options{
+	hook, err := logrushooksentry.NewHook(ctx, logrushooksentry.Options{
 		SentryDSN: *config.Get().SentryDSN,
 		Release:   config.GetVersion(),
 	})
@@ -43,7 +43,6 @@ func Start(ctx context.Context) error {
 	}
 
 	log.AddHook(hook)
-	defer hook.Stop()
 
 	log.Infof("Starting %s...", config.GetVersion())
 
