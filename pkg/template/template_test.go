@@ -13,6 +13,7 @@ limitations under the License.
 package template_test
 
 import (
+	"net"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/template"
@@ -43,5 +44,18 @@ func TestTemplateValue(t *testing.T) {
 		if value != v {
 			t.Fatalf("must be %s, got=%s", v, value)
 		}
+	}
+}
+
+func TestResolve(t *testing.T) {
+	t.Parallel()
+
+	value, err := template.Get(types.ContainerInfo{}, `{{ Resolve "google.com" }}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if net.ParseIP(value) == nil {
+		t.Fatal("not valid ip")
 	}
 }

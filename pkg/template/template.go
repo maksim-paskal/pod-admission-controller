@@ -14,6 +14,7 @@ package template
 
 import (
 	"bytes"
+	"net"
 	"regexp"
 	"text/template"
 
@@ -43,6 +44,14 @@ func Get(containerInfo types.ContainerInfo, value string) (string, error) {
 			}
 
 			return ""
+		},
+		"Resolve": func(domain string) string {
+			ip, err := net.ResolveIPAddr("ip", domain)
+			if err != nil {
+				return "error: " + err.Error()
+			}
+
+			return ip.String()
 		},
 	}).Parse(value)
 	if err != nil {
