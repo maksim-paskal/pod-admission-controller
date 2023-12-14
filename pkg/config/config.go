@@ -20,51 +20,47 @@ import (
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 const (
-	defaultGracePeriod             = 5
-	defaultAddr                    = ":8443"
-	defaultMetricsAddr             = ":31080"
-	defaultContainerResourceCPU    = "100m"
-	defaultContainerResourceMemory = "500Mi"
+	defaultGracePeriod = 5
+	defaultAddr        = ":8443"
+	defaultMetricsAddr = ":31080"
 )
 
 type Params struct {
-	GracePeriodSeconds   *int
-	ConfigFile           *string
-	KubeConfigFile       *string
-	LogLevel             *string
-	LogPretty            *bool
-	Addr                 *string
-	MetricsAddr          *string
-	CertFile             *string
-	KeyFile              *string
-	Rules                []*types.Rule
-	DefaultRequestCPU    *string
-	DefaultRequestMemory *string
-	SentryEndpoint       *string
-	SentryToken          *string
-	SentryDSN            *string
+	GracePeriodSeconds *int
+	ConfigFile         *string
+	KubeConfigFile     *string
+	LogLevel           *string
+	LogPretty          *bool
+	Addr               *string
+	MetricsAddr        *string
+	CertFile           *string
+	KeyFile            *string
+	Rules              []*types.Rule
+	// DefaultRequestCPU    *string
+	// DefaultRequestMemory *string
+	SentryEndpoint *string
+	SentryToken    *string
+	SentryDSN      *string
+	CreateSecrets  []*types.CreateSecret
 }
 
 var param = Params{
-	GracePeriodSeconds:   flag.Int("graceperiod", defaultGracePeriod, "grace period"),
-	ConfigFile:           flag.String("config", "", "config file"),
-	KubeConfigFile:       flag.String("kubeconfig", "", "kubeconfig file"),
-	LogLevel:             flag.String("log.level", "INFO", "log level"),
-	LogPretty:            flag.Bool("log.pretty", false, "print log in pretty format"),
-	Addr:                 flag.String("listen", defaultAddr, "address to listen on"),
-	MetricsAddr:          flag.String("metrics.listen", defaultMetricsAddr, "address to listen on metrics"),
-	CertFile:             flag.String("cert", "server.crt", "certificate file"),
-	KeyFile:              flag.String("key", "server.key", "key file"),
-	DefaultRequestCPU:    flag.String("adddefaultresources.cpu", defaultContainerResourceCPU, "default cpu resources"),
-	DefaultRequestMemory: flag.String("addefaultresources.memory", defaultContainerResourceMemory, "default memory resources"), //nolint:lll
-	SentryEndpoint:       flag.String("sentry.endpoint", "", "sentry endpoint"),
-	SentryToken:          flag.String("sentry.token", "", "sentry token"),
-	SentryDSN:            flag.String("sentry.dsn", os.Getenv("SENTRY_DSN"), "sentry DSN for error reporting"),
+	GracePeriodSeconds: flag.Int("graceperiod", defaultGracePeriod, "grace period"),
+	ConfigFile:         flag.String("config", "", "config file"),
+	KubeConfigFile:     flag.String("kubeconfig", "", "kubeconfig file"),
+	LogLevel:           flag.String("log.level", "INFO", "log level"),
+	LogPretty:          flag.Bool("log.pretty", false, "print log in pretty format"),
+	Addr:               flag.String("listen", defaultAddr, "address to listen on"),
+	MetricsAddr:        flag.String("metrics.listen", defaultMetricsAddr, "address to listen on metrics"),
+	CertFile:           flag.String("cert", "server.crt", "certificate file"),
+	KeyFile:            flag.String("key", "server.key", "key file"),
+	SentryEndpoint:     flag.String("sentry.endpoint", "", "sentry endpoint"),
+	SentryToken:        flag.String("sentry.token", "", "sentry token"),
+	SentryDSN:          flag.String("sentry.dsn", os.Getenv("SENTRY_DSN"), "sentry DSN for error reporting"),
 }
 
 func (p *Params) GetGracePeriod() time.Duration {
@@ -94,14 +90,6 @@ func Load() error {
 }
 
 func Check() error {
-	if _, err := resource.ParseQuantity(*param.DefaultRequestCPU); err != nil {
-		return errors.Wrapf(err, "not valid resources %s", *param.DefaultRequestCPU)
-	}
-
-	if _, err := resource.ParseQuantity(*param.DefaultRequestMemory); err != nil {
-		return errors.Wrapf(err, "not valid resources %s", *param.DefaultRequestMemory)
-	}
-
 	return nil
 }
 

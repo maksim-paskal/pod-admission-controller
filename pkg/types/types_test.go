@@ -28,99 +28,35 @@ func TestGetPodAnnotation(t *testing.T) {
 	containerInfo := types.ContainerInfo{
 		PodAnnotations: map[string]string{
 			annotationEnv: "test",
+			"test444":     "test444Value",
+		},
+		NamespaceAnnotations: map[string]string{
+			annotationEnv:       "test1",
+			annotationEnv + "2": "test2",
+			"adsasdasd":         "1234567",
 		},
 	}
 
-	env, ok := containerInfo.GetPodAnnotation(annotationEnv)
+	testsOk := make(map[string]string)
 
-	if !ok {
-		t.Fatal("expected to find pod annotation")
-	}
+	testsOk[annotationEnv] = "test"
+	testsOk[annotationEnv+"2"] = "test2"
+	testsOk["adsasdasd"] = "1234567"
+	testsOk["test444"] = "test444Value"
 
-	if env != "test" {
-		t.Fatal("expected to find pod annotation value")
+	for annotation, expected := range testsOk {
+		got, ok := containerInfo.GetPodAnnotation(annotation)
+		if !ok {
+			t.Fatal("expected to find pod annotation")
+		}
+
+		if got != expected {
+			t.Fatalf("expected %s, got %s", expected, got)
+		}
 	}
 
 	if _, ok := containerInfo.GetPodAnnotation("someother"); ok {
 		t.Fatal("annotation should not be found")
-	}
-}
-
-func TestGetSelectedRuleEnabled(t *testing.T) { //nolint:funlen
-	t.Parallel()
-
-	containerInfo := types.ContainerInfo{
-		SelectedRules: []*types.Rule{
-			{
-				Name: "test1",
-			},
-			{
-				Name: "test2",
-				RunAsNonRoot: types.RunAsNonRoot{
-					Enabled: true,
-				},
-			},
-			{
-				Name: "test3",
-				AddDefaultResources: types.AddDefaultResources{
-					Enabled: true,
-				},
-			},
-			{
-				Name: "test4",
-				RunAsNonRoot: types.RunAsNonRoot{
-					Enabled: true,
-				},
-			},
-		},
-	}
-
-	selectedRule, ok := containerInfo.GetSelectedRuleEnabled(types.SelectedRuleRunAsNonRoot)
-
-	if !ok {
-		t.Fatal("expected to find selected rule")
-	}
-
-	if selectedRule.Name != "test2" {
-		t.Fatalf("expected to test2, got %s", selectedRule.Name)
-	}
-
-	selectedRule, ok = containerInfo.GetSelectedRuleEnabled(types.SelectedRuleAddDefaultResources)
-
-	if !ok {
-		t.Fatal("expected to find selected rule")
-	}
-
-	if selectedRule.Name != "test3" {
-		t.Fatalf("expected to test3, got %s", selectedRule.Name)
-	}
-
-	// invalid rule
-	_, ok = containerInfo.GetSelectedRuleEnabled("fake")
-	if ok {
-		t.Fatal("expected not to find selected rule")
-	}
-
-	containerInfo = types.ContainerInfo{
-		SelectedRules: []*types.Rule{
-			{
-				Name: "test1",
-			},
-			{
-				Name: "test2",
-			},
-			{
-				Name: "test3",
-			},
-		},
-	}
-
-	if _, ok = containerInfo.GetSelectedRuleEnabled(types.SelectedRuleRunAsNonRoot); ok {
-		t.Fatal("expected not to find selected rule")
-	}
-
-	if _, ok = containerInfo.GetSelectedRuleEnabled(types.SelectedRuleAddDefaultResources); ok {
-		t.Fatal("expected not to find selected rule")
 	}
 }
 
@@ -173,5 +109,27 @@ func TestString(t *testing.T) {
 
 	if got := containerInfo.String(); got == "" {
 		t.Fatal("expected to find json")
+	}
+}
+
+func TestContainerPath(t *testing.T) {
+	t.Parallel()
+
+	podContainer := types.PodContainer{
+		Type:  "container",
+		Order: 0,
+	}
+
+	if got := podContainer.ContainerPath(); got != "/spec/containers/0" {
+		t.Fatalf("expected /spec/containers/0, got %s", got)
+	}
+
+	podContainer = types.PodContainer{
+		Type:  "initContainer",
+		Order: 0,
+	}
+
+	if got := podContainer.ContainerPath(); got != "/spec/initContainers/0" {
+		t.Fatalf("expected /spec/initContainers/0, got %s", got)
 	}
 }

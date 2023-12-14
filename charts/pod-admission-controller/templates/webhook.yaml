@@ -6,7 +6,7 @@ metadata:
     app: pod-admission-controller
 webhooks:
 - name: pod-admission-controller.pod-admission-controller.svc.cluster.local
-  failurePolicy: Ignore
+  failurePolicy: {{ .Values.webhook.failurePolicy }}
   clientConfig:
     caBundle: {{ tpl .Values.webhook.caBundle . | quote }}
     service:
@@ -18,6 +18,10 @@ webhooks:
     apiGroups: [""]
     apiVersions: ["v1"]
     resources: ["pods"]
+  - operations: ["UPDATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["namespaces"]
   admissionReviewVersions: ["v1"]
   sideEffects: None
   timeoutSeconds: 5

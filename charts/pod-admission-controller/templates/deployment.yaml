@@ -37,6 +37,9 @@ spec:
       - name: config
         configMap:
           name: {{ .Release.Name }}-config
+{{ if .Values.extraVolumes }}
+{{ toYaml .Values.extraVolumes | indent 6 }}
+{{ end }}
       containers:
       - name: {{ .Release.Name }}
         image: {{ .Values.registry.image }}
@@ -55,6 +58,10 @@ spec:
         env:
 {{ toYaml .Values.env | indent 8 }}
 {{ end }}
+{{ if .Values.command }}
+        command:
+{{ toYaml .Values.command | indent 8 }}
+{{ end }}
         args:
         - -config=/config/config.yaml
         - -cert=/config/server.crt
@@ -63,24 +70,29 @@ spec:
 {{ toYaml .Values.args | indent 8 }}
 {{ end }}
         ports:
-        - containerPort: 8443
-        - containerPort: 31080
+        - name: https
+          containerPort: 8443
+        - name: metrics
+          containerPort: 31080
         volumeMounts:
         - name: config
           mountPath: /config
+{{ if .Values.extraVolumeMounts }}
+{{ toYaml .Values.extraVolumeMounts | indent 8 }}
+{{ end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
         readinessProbe:
           httpGet:
             scheme: HTTPS
             path: /ready
-            port: 8443
+            port: https
           initialDelaySeconds: 3
           periodSeconds: 5
         livenessProbe:
           httpGet:
             scheme: HTTPS
             path: /healthz
-            port: 8443
+            port: https
           initialDelaySeconds: 10
           periodSeconds: 10

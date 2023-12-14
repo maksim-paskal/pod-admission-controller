@@ -1,0 +1,13 @@
+command:
+- /app/pod-admission-controller
+
+extraVolumes:
+- name: local
+  hostPath:
+    # path on github runner
+    path: /home/runner/work/pod-admission-controller/pod-admission-controller/
+
+extraVolumeMounts:
+- name: local
+  mountPath: /app
+  readOnly: true

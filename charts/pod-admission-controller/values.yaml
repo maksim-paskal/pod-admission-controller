@@ -28,6 +28,9 @@ tolerations: []
 # application config
 config: ""
 
+extraVolumes: []
+extraVolumeMounts: []
+
 # certificates for dev purpuses, generate new certificates
 certificates:
   caCert: |
@@ -110,6 +113,8 @@ certificates:
 
 webhook:
   caBundle: "{{ b64enc .Values.certificates.caCert }}"
+  # Fail/Ignore
+  failurePolicy: Ignore
   namespaceSelector:
   - key: environment
     operator: In

@@ -14,7 +14,9 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -26,14 +28,18 @@ const (
 	AnnotationIgnore = annotationPrefix + "/ignore"
 	// list of containers that should be skipped from RunAsNonRoot.
 	AnnotationIgnoreEnv = annotationPrefix + "/ignoreEnv"
-	// list of containers that should be skipped from RunAsNonRoot.
+	// Deprecated: list of containers that should be skipped from RunAsNonRoot.
 	AnnotationIgnoreRunAsNonRoot = annotationPrefix + "/ignoreRunAsNonRoot"
-	// list of containers that should be skipped from AddDefaultResources.
+	// Deprecated: list of containers that should be skipped from AddDefaultResources.
 	AnnotationIgnoreAddDefaultResources = annotationPrefix + "/ignoreAddDefaultResources"
+	// Default CPU requests.
+	AnnotationDefaultResourcesCPU = annotationPrefix + "/defaultResourcesCPU"
+	// Default Memory requests.
+	AnnotationDefaultResourcesMemory = annotationPrefix + "/defaultResourcesMemory"
 	// warning when AnnotationIgnore is enabled.
-	WarningPodDoedNotNeedMutation = annotationPrefix + ": POD ignore mutation by annotation " + AnnotationIgnore
+	WarningObjectDoedNotNeedMutation = annotationPrefix + ": ignore mutation by annotation " + AnnotationIgnore
 	// warning when no patch is generated.
-	WarningNoPatchGenerated = annotationPrefix + ". No patches found for pod"
+	WarningNoPatchGenerated = annotationPrefix + ". No patches found"
 )
 
 type RunAsNonRootReplaceUser struct {
@@ -48,18 +54,38 @@ type RunAsNonRoot struct {
 	ReplaceUser RunAsNonRootReplaceUser
 }
 
+type ReplaceContainerImageHost struct {
+	Enabled bool
+	From    string
+	To      string
+}
+
 type AddDefaultResources struct {
-	Enabled         bool
-	LimitCPU        bool
+	Enabled  bool
+	LimitCPU bool
+	// Deprecated: use custompatch instead
 	RemoveResources bool
 }
 
 type Rule struct {
-	Name                string
-	Env                 []corev1.EnvVar
-	Conditions          []Conditions
-	AddDefaultResources AddDefaultResources
-	RunAsNonRoot        RunAsNonRoot
+	Debug                     bool
+	Name                      string
+	Env                       []corev1.EnvVar
+	Conditions                []Conditions
+	AddDefaultResources       AddDefaultResources
+	RunAsNonRoot              RunAsNonRoot
+	ReplaceContainerImageHost ReplaceContainerImageHost
+	Tolerations               []corev1.Toleration
+	ImagePullSecrets          []corev1.LocalObjectReference
+	CustomPatches             []PatchOperation
+}
+
+func (r *Rule) Logf(format string, args ...interface{}) {
+	if r.Debug || log.IsLevelEnabled(log.DebugLevel) {
+		log.WithFields(log.Fields{
+			"name": r.Name,
+		}).Infof(format, args...)
+	}
 }
 
 type PatchOperation struct {
@@ -68,20 +94,33 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
+func (p *PatchOperation) String() string {
+	out, err := json.Marshal(p)
+	if err != nil {
+		return err.Error()
+	}
+
+	return string(out)
+}
+
 type Conditions struct {
 	Key      string
 	Operator string
 	Value    string
+	Values   []string
 }
 
 type ContainerImage struct {
-	Name string
-	Slug string
-	Tag  string
+	Domain string
+	Name   string
+	Slug   string
+	Tag    string
 }
 
 type ContainerInfo struct {
+	PodContainer         *PodContainer
 	ContainerName        string
+	ContainerType        string
 	Namespace            string
 	NamespaceAnnotations map[string]string
 	NamespaceLabels      map[string]string
@@ -107,6 +146,10 @@ func (c *ContainerInfo) GetPodAnnotation(key string) (string, bool) {
 		return val, true
 	}
 
+	if val, ok := c.NamespaceAnnotations[key]; ok {
+		return val, true
+	}
+
 	return "", false
 }
 
@@ -120,26 +163,56 @@ func (c *ContainerInfo) GetSelectedRulesEnv() []corev1.EnvVar {
 	return containerEnv
 }
 
-type SelectedRuleType string
+type PodContainer struct {
+	Pod           *corev1.Pod
+	Namespace     *corev1.Namespace
+	Order         int
+	Type          string
+	Container     *corev1.Container
+	ContainerInfo *ContainerInfo
+}
 
-const (
-	SelectedRuleRunAsNonRoot        = SelectedRuleType("RunAsNonRoot")
-	SelectedRuleAddDefaultResources = SelectedRuleType("AddDefaultResources")
-)
-
-func (c *ContainerInfo) GetSelectedRuleEnabled(ruleType SelectedRuleType) (*Rule, bool) {
-	for _, selectedRule := range c.SelectedRules {
-		switch ruleType {
-		case SelectedRuleRunAsNonRoot:
-			if selectedRule.RunAsNonRoot.Enabled {
-				return selectedRule, true
-			}
-		case SelectedRuleAddDefaultResources:
-			if selectedRule.AddDefaultResources.Enabled {
-				return selectedRule, true
-			}
-		}
+func (c *PodContainer) String() string {
+	out, err := json.Marshal(c)
+	if err != nil {
+		return err.Error()
 	}
 
-	return &Rule{}, false
+	return string(out)
+}
+
+func (c *PodContainer) ContainerPath() string {
+	return fmt.Sprintf("/spec/%ss/%d", c.Type, c.Order)
+}
+
+func PodContainersFromPod(namespace *corev1.Namespace, pod *corev1.Pod) []*PodContainer {
+	podContainers := make([]*PodContainer, 0)
+
+	for order := range pod.Spec.InitContainers {
+		podContainers = append(podContainers, &PodContainer{
+			Pod:       pod,
+			Namespace: namespace,
+			Order:     order,
+			Type:      "initContainer",
+			Container: &pod.Spec.InitContainers[order],
+		})
+	}
+
+	for order := range pod.Spec.Containers {
+		podContainers = append(podContainers, &PodContainer{
+			Pod:       pod,
+			Namespace: namespace,
+			Order:     order,
+			Type:      "container",
+			Container: &pod.Spec.Containers[order],
+		})
+	}
+
+	return podContainers
+}
+
+type CreateSecret struct {
+	Name string
+	Type string
+	Data map[string][]byte
 }

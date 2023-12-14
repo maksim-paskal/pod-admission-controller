@@ -23,7 +23,7 @@ import (
 func TestTemplateValue(t *testing.T) {
 	t.Parallel()
 
-	containerInfo := types.ContainerInfo{
+	containerInfo := &types.ContainerInfo{
 		Image: &types.ContainerImage{Name: "/a/b/c/d:e"},
 	}
 
@@ -34,6 +34,7 @@ func TestTemplateValue(t *testing.T) {
 	cases[`{{ index (regexp "/(.+):(.+)$" "/1/2/3/4:main") 2 }}`] = "main"
 	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" "/1/2/3/4:main") 3 }}`] = "unknown"
 	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" .Image.Name) 2 }}`] = "e"
+	cases[`{{ ResolveFallback "fakedomain" "fakefallback" }}`] = "fakefallback"
 
 	for k, v := range cases {
 		value, err := template.Get(containerInfo, k)
@@ -50,7 +51,7 @@ func TestTemplateValue(t *testing.T) {
 func TestResolve(t *testing.T) {
 	t.Parallel()
 
-	value, err := template.Get(types.ContainerInfo{}, `{{ Resolve "google.com" }}`)
+	value, err := template.Get(&types.ContainerInfo{}, `{{ Resolve "google.com" }}`)
 	if err != nil {
 		t.Fatal(err)
 	}

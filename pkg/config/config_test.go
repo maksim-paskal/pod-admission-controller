@@ -43,15 +43,6 @@ func TestConfig(t *testing.T) {
 	if err := config.Check(); err != nil {
 		t.Fatal("not valid config")
 	}
-
-	if err := flag.Set("adddefaultresources.cpu", "fake"); err != nil {
-		t.Fatal(err)
-	}
-
-	// config check must fail
-	if err := config.Check(); err == nil {
-		t.Fatal("must fail config check adddefaultresources.cpu not valid")
-	}
 }
 
 func TestVersion(t *testing.T) {

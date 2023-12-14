@@ -26,3 +26,18 @@ rules:
     value: "6831"
   - name: SERVICE_NAME
     value: "{{ .Image.Slug }}"
+
+- name: "rule-replaceContainerImageHost-1"
+  replaceContainerImageHost:
+    enabled: true
+    to: docker.io
+  conditions:
+  - key: .Image.Domain
+    operator: regexp
+    value: ^(test-fake.test.com)$
+
+- name: "rule-replaceContainerImageHost-2"
+  replaceContainerImageHost:
+    enabled: true
+    from: test.test.com
+    to: docker.io

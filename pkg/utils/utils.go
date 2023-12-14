@@ -15,6 +15,7 @@ package utils
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/template"
@@ -22,7 +23,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func CheckConditions(containerInfo types.ContainerInfo, conditions []types.Conditions) (bool, error) { //nolint:cyclop
+const negate = "not"
+
+func CheckConditions(containerInfo *types.ContainerInfo, conditions []types.Conditions) (bool, error) { //nolint:cyclop
 	if len(conditions) == 0 {
 		return true, nil
 	}
@@ -30,23 +33,45 @@ func CheckConditions(containerInfo types.ContainerInfo, conditions []types.Condi
 	var found int
 
 	for _, condition := range conditions {
+		if len(condition.Key) == 0 {
+			return false, errors.Errorf("empty key")
+		}
+
 		key, err := template.Get(containerInfo, fmt.Sprintf("{{ %s }}", condition.Key))
 		if err != nil {
 			return false, errors.Wrap(err, "error matching key")
 		}
 
+		conditionRequired := !strings.HasPrefix(strings.ToLower(condition.Operator), negate)
+
 		switch strings.ToLower(condition.Operator) {
-		case "equal":
-			if key == condition.Value {
+		case "equal", negate + "equal":
+			if len(condition.Value) == 0 {
+				return false, errors.Errorf("empty value for operator %s", condition.Operator)
+			}
+
+			if (key == condition.Value) == conditionRequired {
 				found++
 			}
-		case "regexp":
+		case "regexp", negate + "regexp":
+			if len(condition.Value) == 0 {
+				return false, errors.Errorf("empty value for operator %s", condition.Operator)
+			}
+
 			match, err := regexp.MatchString(condition.Value, key)
 			if err != nil {
 				return false, errors.Wrap(err, "error matching regexp")
 			}
 
-			if match {
+			if match == conditionRequired {
+				found++
+			}
+		case "in", negate + "in":
+			if len(condition.Values) == 0 {
+				return false, errors.Errorf("empty values for operator %s", condition.Operator)
+			}
+
+			if slices.Contains(condition.Values, key) == conditionRequired {
 				found++
 			}
 		default:
