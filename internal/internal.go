@@ -15,7 +15,10 @@ package internal
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"flag"
 	"net/http"
+	"os"
 	"time"
 
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
@@ -23,8 +26,6 @@ import (
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/sentry"
-	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
-	"github.com/maksim-paskal/pod-admission-controller/pkg/utils"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/web"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -32,6 +33,11 @@ import (
 
 // webhook spec timeoutSeconds.
 const serverTimeout = 5 * time.Second
+
+var (
+	testPod       = flag.String("test.pod", "", "test pod")
+	testNamespace = flag.String("test.namespace", "", "test namespace")
+)
 
 func Start(ctx context.Context) error {
 	hook, err := logrushooksentry.NewHook(ctx, logrushooksentry.Options{
@@ -46,17 +52,34 @@ func Start(ctx context.Context) error {
 
 	log.Infof("Starting %s...", config.GetVersion())
 
-	if err := CheckConfigRules(); err != nil {
-		return errors.Wrap(err, "error in config rules")
-	}
-
 	if err := sentry.CreateCache(ctx); err != nil {
 		return errors.Wrap(err, "failed to create sentry cache")
+	}
+
+	if len(*testPod)+len(*testNamespace) > 0 {
+		patchBytes, err := api.TestPOD(ctx, *testNamespace, *testPod)
+		if err != nil {
+			log.WithError(err).Error()
+		}
+
+		log.Info("Creating patch.json...")
+
+		if err := os.WriteFile("patch.json", patchBytes, 0o600); err != nil { //nolint:gomnd
+			log.WithError(err).Error()
+		}
+
+		os.Exit(0)
+
+		return nil
 	}
 
 	sCert, err := tls.LoadX509KeyPair(*config.Get().CertFile, *config.Get().KeyFile)
 	if err != nil {
 		return errors.Wrap(err, "can not load certificates")
+	}
+
+	if err := printCertInfo(sCert); err != nil {
+		return errors.Wrap(err, "can not print certificate info")
 	}
 
 	go startServerTLS(ctx, sCert)
@@ -89,7 +112,7 @@ func startServerTLS(ctx context.Context, sCert tls.Certificate) {
 
 	log.Infof("Listening on address %s", server.Addr)
 
-	if err := server.ListenAndServeTLS("", ""); err != nil {
+	if err := server.ListenAndServeTLS("", ""); err != nil && ctx.Err() == nil {
 		log.WithError(err).Fatal()
 	}
 }
@@ -118,27 +141,22 @@ func startMetricsServer(ctx context.Context) {
 
 	log.Infof("Listening metrics on address %s", server.Addr)
 
-	if err := server.ListenAndServe(); err != nil {
+	if err := server.ListenAndServe(); err != nil && ctx.Err() == nil {
 		log.WithError(err).Fatal()
 	}
 }
 
-// check config for templating errors.
-func CheckConfigRules() error {
-	for _, containerConfig := range config.Get().Rules {
-		containerInfo := types.ContainerInfo{
-			Image: &types.ContainerImage{},
+func printCertInfo(sCert tls.Certificate) error {
+	for _, cert := range sCert.Certificate {
+		x509Cert, err := x509.ParseCertificate(cert)
+		if err != nil {
+			return errors.Wrap(err, "can not parse certificate")
 		}
 
-		_, err := utils.CheckConditions(containerInfo, containerConfig.Conditions)
-		if err != nil {
-			return errors.Wrap(err, "error in conditions")
-		}
-
-		_, err = api.FormatEnv(containerInfo, containerConfig.Env)
-		if err != nil {
-			return errors.Wrap(err, "error in env")
-		}
+		log.Infof("Certificate valid for %s till %s",
+			x509Cert.Subject.CommonName,
+			x509Cert.NotAfter.String(),
+		)
 	}
 
 	return nil

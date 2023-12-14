@@ -13,137 +13,115 @@ limitations under the License.
 package patch_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/env"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/imagehost"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/nonroot"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-const addOperation = "add"
-
-func TestCreateEnvPatchEnv(t *testing.T) {
+func TestNewPatch(t *testing.T) {
 	t.Parallel()
 
-	containerInfo := types.ContainerInfo{}
-
-	containerEnv := []corev1.EnvVar{
-		{
-			Name:  "TEST1",
-			Value: "1",
-		},
-		{
-			Name:  "TEST2",
-			Value: "2",
-		},
+	containerInfo := &types.ContainerInfo{
+		Image: &types.ContainerImage{},
 	}
 
-	newEnv := []corev1.EnvVar{
-		{
-			Name:  "TEST1",
-			Value: "3",
-		},
-		{
-			Name:  "TEST4",
-			Value: "4",
-		},
+	patchOps, err := patch.NewPatch(context.TODO(), containerInfo)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	envPatch := patch.CreateEnvPatch(0, containerInfo, containerEnv, newEnv)
-
-	if len(envPatch) != 1 {
-		t.Fatal("1 patch must be created")
-	}
-
-	if envPatch[0].Op != addOperation || envPatch[0].Path != "/spec/containers/0/env/-" {
-		t.Fatal("not corrected patch")
-	}
-
-	// scenario 2 (container env is empty)
-	containerEnv = []corev1.EnvVar{}
-
-	envPatch = patch.CreateEnvPatch(0, containerInfo, containerEnv, newEnv)
-
-	if len(envPatch) != 1 {
-		t.Fatal("1 patch must be created")
-	}
-
-	if envPatch[0].Op != addOperation || envPatch[0].Path != "/spec/containers/0/env" {
-		t.Fatal("not corrected patch")
+	if len(patchOps) != 0 {
+		t.Fatal("len(patchOps) != 0")
 	}
 }
 
-func TestNullResources(t *testing.T) {
+func TestIgnorePatch(t *testing.T) { //nolint:funlen
 	t.Parallel()
 
-	resources := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU: resource.MustParse("1"),
+	type Test struct {
+		Patch         patch.Patch
+		ContainerName string
+		PodAnnotations,
+		NamespaceAnnotations map[string]string
+		Ignore bool
+	}
+
+	tests := []Test{
+		{
+			Patch:         &env.Patch{},
+			ContainerName: "test",
+			PodAnnotations: map[string]string{
+				"pod-admission-controller/ignore-env": "test",
+			},
+			Ignore: true,
+		},
+		{
+			Patch:         &env.Patch{},
+			ContainerName: "test1",
+			PodAnnotations: map[string]string{
+				"pod-admission-controller/ignore-env": "test",
+			},
+			Ignore: false,
+		},
+		{
+			Patch:         &env.Patch{},
+			ContainerName: "test",
+			PodAnnotations: map[string]string{
+				"fake": "test",
+			},
+			Ignore: false,
+		},
+		{
+			Patch:         &nonroot.Patch{},
+			ContainerName: "test",
+			PodAnnotations: map[string]string{
+				"pod-admission-controller/ignore-nonroot": "test",
+			},
+			Ignore: true,
+		},
+		{
+			Patch:         &imagehost.Patch{},
+			ContainerName: "test",
+			PodAnnotations: map[string]string{
+				"pod-admission-controller/ignore-imagehost": "test",
+			},
+			Ignore: true,
+		},
+		{
+			Patch:         &imagehost.Patch{},
+			ContainerName: "test",
+			PodAnnotations: map[string]string{
+				"pod-admission-controller/ignore-imagehost": "*",
+			},
+			Ignore: true,
 		},
 	}
 
-	rule := types.Rule{
-		AddDefaultResources: types.AddDefaultResources{
-			Enabled:         true,
-			RemoveResources: true,
-		},
-	}
-	patch := patch.CreateDefaultResourcesPatch(&rule, 0, types.ContainerInfo{}, resources)
+	for _, test := range tests {
+		test := test
 
-	if len(patch) != 1 {
-		t.Fatal("1 patch must be created")
-	}
+		t.Run(fmt.Sprintf("%+v", test), func(t *testing.T) {
+			t.Parallel()
 
-	if patch[0].Op != "remove" || patch[0].Path != "/spec/containers/0/resources" {
-		t.Fatalf("not corrected op %s", patch[0].Op)
-	}
-}
+			containerInfo := &types.ContainerInfo{
+				PodAnnotations: map[string]string{
+					"pod-admission-controller/ignore-env": "test",
+				},
+			}
 
-func TestCreateDefaultResourcesPatch(t *testing.T) {
-	t.Parallel()
+			containerInfo.ContainerName = test.ContainerName
+			containerInfo.NamespaceAnnotations = test.NamespaceAnnotations
+			containerInfo.PodAnnotations = test.PodAnnotations
 
-	resources := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU: resource.MustParse("1"),
-		},
-	}
-
-	rule := types.Rule{
-		AddDefaultResources: types.AddDefaultResources{
-			Enabled: true,
-		},
-	}
-	patch := patch.CreateDefaultResourcesPatch(&rule, 0, types.ContainerInfo{}, resources)
-
-	if len(patch) != 1 {
-		t.Fatal("1 patch must be created")
-	}
-
-	if patch[0].Op != addOperation || patch[0].Path != "/spec/containers/0/resources" {
-		t.Fatal("not corrected patch")
-	}
-}
-
-func TestCreateRunAsNonRootPatch(t *testing.T) {
-	t.Parallel()
-
-	rule := types.Rule{
-		RunAsNonRoot: types.RunAsNonRoot{
-			Enabled: true,
-		},
-	}
-
-	podSecurityContext := corev1.PodSecurityContext{}
-	securityContext := corev1.SecurityContext{}
-
-	patch := patch.CreateRunAsNonRootPatch(&rule, 0, types.ContainerInfo{}, &podSecurityContext, &securityContext)
-
-	if len(patch) != 1 {
-		t.Fatal("1 patch must be created")
-	}
-
-	if patch[0].Op != addOperation || patch[0].Path != "/spec/containers/0/securityContext" {
-		t.Fatalf("not corrected patch %s/%s", patch[0].Op, patch[0].Path)
+			if patch.IgnoreContainerPatch(test.Patch, containerInfo) != test.Ignore {
+				t.Fatal("patch.IgnorePatch(&patch.EnvPatch{}, containerInfo) != test.Ignore")
+			}
+		})
 	}
 }

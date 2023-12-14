@@ -11,3 +11,4 @@ linters:
   - varnamelen
   - musttag
   - depguard
+  - maligned

@@ -15,6 +15,7 @@ package template
 import (
 	"bytes"
 	"net"
+	"os"
 	"regexp"
 	"text/template"
 
@@ -23,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Get(containerInfo types.ContainerInfo, value string) (string, error) {
+func Get(containerInfo *types.ContainerInfo, value string) (string, error) {
 	tmpl, err := template.New("tmpl").Funcs(template.FuncMap{
 		// regexp string by pattern
 		"regexp": func(pattern string, value string) []string {
@@ -53,6 +54,15 @@ func Get(containerInfo types.ContainerInfo, value string) (string, error) {
 
 			return ip.String()
 		},
+		"ResolveFallback": func(domain, fallback string) string {
+			ip, err := net.ResolveIPAddr("ip", domain)
+			if err != nil {
+				return fallback
+			}
+
+			return ip.String()
+		},
+		"env": os.Getenv,
 	}).Parse(value)
 	if err != nil {
 		return "", errors.Wrap(err, "error parsing template")
