@@ -14,46 +14,126 @@ package custompatch_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/custompatch"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func TestCustompatch(t *testing.T) {
+func TestCustompatch(t *testing.T) { //nolint:funlen
 	t.Parallel()
 
 	patch := custompatch.Patch{}
 
-	containerInfo := &types.ContainerInfo{
-		ContainerName: "test",
-		PodContainer: &types.PodContainer{
-			Order: 123,
-			Type:  "container",
+	type testCase struct {
+		Error         bool
+		Ignore        bool
+		CustomPatches types.PatchOperation
+		Expected      types.PatchOperation
+	}
+
+	tests := []testCase{
+		{
+			CustomPatches: types.PatchOperation{
+				Op:    "{{ .ContainerName }}",
+				Path:  "{{ .PodContainer.ContainerPath }}/annotations",
+				Value: nil,
+			},
+			Expected: types.PatchOperation{
+				Op:    "test",
+				Path:  "/spec/containers/123/annotations",
+				Value: nil,
+			},
 		},
-		SelectedRules: []*types.Rule{
-			{
-				CustomPatches: []types.PatchOperation{
-					{
-						Op:    "{{ .ContainerName }}",
-						Path:  "{{ .PodContainer.ContainerPath }}/annotations",
-						Value: nil,
-					},
-				},
+		{
+			Ignore: true,
+			CustomPatches: types.PatchOperation{
+				Op:    "remove",
+				Path:  "/spec/affinity",
+				Value: nil,
+			},
+		},
+		{
+			Ignore: true,
+			CustomPatches: types.PatchOperation{
+				Op:    "remove",
+				Path:  "/spec/nodeselector",
+				Value: nil,
+			},
+		},
+		{
+			CustomPatches: types.PatchOperation{
+				Op:    "remove",
+				Path:  "/spec/test",
+				Value: nil,
+			},
+			Expected: types.PatchOperation{
+				Op:    "remove",
+				Path:  "/spec/test",
+				Value: nil,
+			},
+		},
+		{
+			Error: true,
+			CustomPatches: types.PatchOperation{
+				Op: "{{ .FFFFAAAKKEEE }}",
+			},
+		},
+		{
+			Error: true,
+			CustomPatches: types.PatchOperation{
+				Path: "{{ .FFFFAAAKKEEE }}",
 			},
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, test := range tests {
+		test := test
 
-	if len(patchOps) != 1 {
-		t.Fatal("1 patch must be created")
-	}
+		t.Run(fmt.Sprintf("%+v", test), func(t *testing.T) {
+			t.Parallel()
 
-	if patchOps[0].Op != "test" || patchOps[0].Path != "/spec/containers/123/annotations" {
-		t.Fatalf("not corrected patch %s", patchOps[0].String())
+			containerInfo := &types.ContainerInfo{
+				ContainerName: "test",
+				PodContainer: &types.PodContainer{
+					Order: 123,
+					Type:  "container",
+					Pod: &corev1.Pod{
+						Spec: corev1.PodSpec{
+							Affinity:     nil,
+							NodeSelector: nil,
+						},
+					},
+				},
+				SelectedRules: []*types.Rule{
+					{
+						CustomPatches: []types.PatchOperation{test.CustomPatches},
+					},
+				},
+			}
+
+			patchOps, err := patch.Create(context.TODO(), containerInfo)
+			if test.Error && err != nil {
+				t.Skip("its ok")
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if test.Ignore && len(patchOps) == 0 {
+				return
+			}
+
+			if len(patchOps) != 1 {
+				t.Fatal("1 patch must be created")
+			}
+
+			if patchOps[0].Op != test.Expected.Op || patchOps[0].Path != test.Expected.Path {
+				t.Fatalf("not corrected patch %s", patchOps[0].String())
+			}
+		})
 	}
 }
