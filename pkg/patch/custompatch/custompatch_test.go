@@ -32,6 +32,7 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 		Ignore        bool
 		CustomPatches types.PatchOperation
 		Expected      types.PatchOperation
+		Container     *corev1.Container
 	}
 
 	tests := []testCase{
@@ -43,7 +44,7 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 			},
 			Expected: types.PatchOperation{
 				Op:    "test",
-				Path:  "/spec/containers/123/annotations",
+				Path:  "/spec/containers/1/annotations",
 				Value: nil,
 			},
 		},
@@ -87,6 +88,54 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 				Path: "{{ .FFFFAAAKKEEE }}",
 			},
 		},
+		{
+			Container: &corev1.Container{
+				Name:           "test",
+				ReadinessProbe: &corev1.Probe{},
+			},
+			CustomPatches: types.PatchOperation{
+				Op:   "remove",
+				Path: "/spec/containers/1/readinessProbe",
+			},
+			Expected: types.PatchOperation{
+				Op:   "remove",
+				Path: "/spec/containers/1/readinessProbe",
+			},
+		},
+		{
+			Ignore: true,
+			Container: &corev1.Container{
+				Name: "test",
+			},
+			CustomPatches: types.PatchOperation{
+				Op:   "remove",
+				Path: "/spec/containers/1/readinessProbe",
+			},
+		},
+		{
+			Container: &corev1.Container{
+				Name:          "test",
+				LivenessProbe: &corev1.Probe{},
+			},
+			CustomPatches: types.PatchOperation{
+				Op:   "remove",
+				Path: "/spec/containers/1/livenessProbe",
+			},
+			Expected: types.PatchOperation{
+				Op:   "remove",
+				Path: "/spec/containers/1/livenessProbe",
+			},
+		},
+		{
+			Ignore: true,
+			Container: &corev1.Container{
+				Name: "test",
+			},
+			CustomPatches: types.PatchOperation{
+				Op:   "remove",
+				Path: "/spec/containers/1/livenessProbe",
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -98,8 +147,9 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 			containerInfo := &types.ContainerInfo{
 				ContainerName: "test",
 				PodContainer: &types.PodContainer{
-					Order: 123,
-					Type:  "container",
+					Order:     1,
+					Type:      "container",
+					Container: test.Container,
 					Pod: &corev1.Pod{
 						Spec: corev1.PodSpec{
 							Affinity:     nil,
