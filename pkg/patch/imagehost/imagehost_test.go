@@ -179,3 +179,43 @@ func TestReplaceImageHostPatchNotDockerIo(t *testing.T) {
 		t.Fatalf("not corrected value got=%s, required=%s", patchOps[0].Value, requiredValue)
 	}
 }
+
+func TestReplaceImageTag(t *testing.T) {
+	t.Parallel()
+
+	patch := imagehost.Patch{}
+
+	containerInfo := &types.ContainerInfo{
+		PodContainer: &types.PodContainer{
+			Type:      "container",
+			Container: &corev1.Container{},
+		},
+		Image: &types.ContainerImage{
+			Name: "some.docker.io/test1/test2:release-1234",
+		},
+		SelectedRules: []*types.Rule{
+			{
+				ReplaceContainerImageHost: types.ReplaceContainerImageHost{
+					Enabled: true,
+					From:    "test1/test2:release-1234",
+					To:      "test1/test2:release-9876",
+				},
+			},
+		},
+	}
+
+	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(patchOps) != 1 {
+		t.Fatal("1 patch must be created")
+	}
+
+	requiredValue := "some.docker.io/test1/test2:release-9876"
+
+	if patchOps[0].Value != requiredValue {
+		t.Fatalf("not corrected value got=%s, required=%s", patchOps[0].Value, requiredValue)
+	}
+}
