@@ -136,6 +136,16 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 				Path: "/spec/containers/1/livenessProbe",
 			},
 		},
+		{
+			Ignore: true,
+			Container: &corev1.Container{
+				Name: "test",
+			},
+			CustomPatches: types.PatchOperation{
+				Op:   "remove",
+				Path: "{{ .PodContainer.ContainerPath }}/readinessProbe",
+			},
+		},
 	}
 
 	for _, test := range tests {

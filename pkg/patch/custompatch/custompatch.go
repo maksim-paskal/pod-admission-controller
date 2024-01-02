@@ -28,10 +28,6 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 
 	for _, selectedRule := range containerInfo.SelectedRules {
 		for _, customPatch := range selectedRule.CustomPatches {
-			if p.ignorePatch(customPatch, containerInfo) {
-				continue
-			}
-
 			newPatch := customPatch
 
 			var err error
@@ -44,6 +40,10 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 			newPatch.Path, err = template.Get(containerInfo, newPatch.Path)
 			if err != nil {
 				return nil, errors.Wrap(err, "error parsing template Path")
+			}
+
+			if p.ignorePatch(newPatch, containerInfo) {
+				continue
 			}
 
 			patch = append(patch, newPatch)
@@ -70,11 +70,11 @@ func (p *Patch) ignorePatch(patch types.PatchOperation, containerInfo *types.Con
 		if pod.Spec.NodeSelector == nil || len(pod.Spec.NodeSelector) == 0 {
 			return true
 		}
-	case containerInfo.PodContainer.ContainerPath() + "/readinessprobe":
+	case strings.ToLower(containerInfo.PodContainer.ContainerPath() + "/readinessProbe"):
 		if containerInfo.PodContainer.Container.ReadinessProbe == nil {
 			return true
 		}
-	case containerInfo.PodContainer.ContainerPath() + "/livenessprobe":
+	case strings.ToLower(containerInfo.PodContainer.ContainerPath() + "/livenessProbe"):
 		if containerInfo.PodContainer.Container.LivenessProbe == nil {
 			return true
 		}
