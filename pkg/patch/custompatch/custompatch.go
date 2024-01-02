@@ -54,7 +54,7 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 }
 
 // check well known operations and ignore them.
-func (p *Patch) ignorePatch(patch types.PatchOperation, containerInfo *types.ContainerInfo) bool {
+func (p *Patch) ignorePatch(patch types.PatchOperation, containerInfo *types.ContainerInfo) bool { //nolint:cyclop
 	if patch.Op != "remove" {
 		return false
 	}
@@ -68,6 +68,14 @@ func (p *Patch) ignorePatch(patch types.PatchOperation, containerInfo *types.Con
 		}
 	case "/spec/nodeselector":
 		if pod.Spec.NodeSelector == nil || len(pod.Spec.NodeSelector) == 0 {
+			return true
+		}
+	case containerInfo.PodContainer.ContainerPath() + "/readinessprobe":
+		if containerInfo.PodContainer.Container.ReadinessProbe == nil {
+			return true
+		}
+	case containerInfo.PodContainer.ContainerPath() + "/livenessprobe":
+		if containerInfo.PodContainer.Container.LivenessProbe == nil {
 			return true
 		}
 	}
