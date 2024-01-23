@@ -337,7 +337,16 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 			Match: true,
 			Conditions: []types.Conditions{
 				{
-					Key:      ".Namespace",
+					Key:      ".NamespaceAnnotations.SOMEFAKE",
+					Operator: "Empty",
+				},
+			},
+		},
+		{
+			Match: false,
+			Conditions: []types.Conditions{
+				{
+					Key:      ".NamespaceAnnotations.SOMEFAKE",
 					Operator: "NotEmpty",
 				},
 			},

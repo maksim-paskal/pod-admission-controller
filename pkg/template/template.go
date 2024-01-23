@@ -25,7 +25,7 @@ import (
 )
 
 func Get(containerInfo *types.ContainerInfo, value string) (string, error) {
-	tmpl, err := template.New("tmpl").Funcs(template.FuncMap{
+	tmpl, err := template.New("tmpl").Option("missingkey=zero").Funcs(template.FuncMap{
 		// regexp string by pattern
 		"regexp": func(pattern string, value string) []string {
 			return regexp.MustCompile(pattern).FindStringSubmatch(value)
