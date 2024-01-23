@@ -127,6 +127,25 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 			},
 		},
 		{
+			Container: &corev1.Container{
+				Name: "testName",
+			},
+			CustomPatches: types.PatchOperation{
+				Op:   "op={{ .PodContainer.Container.Name }}",
+				Path: "path={{ .PodContainer.Container.Name }}",
+				Value: []string{
+					"test1={{ .PodContainer.Container.Name }}",
+				},
+			},
+			Expected: types.PatchOperation{
+				Op:   "op=testName",
+				Path: "path=testName",
+				Value: []string{
+					"test1=testName",
+				},
+			},
+		},
+		{
 			Ignore: true,
 			Container: &corev1.Container{
 				Name: "test",
@@ -144,6 +163,21 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 			CustomPatches: types.PatchOperation{
 				Op:   "remove",
 				Path: "{{ .PodContainer.ContainerPath }}/readinessProbe",
+			},
+		},
+		{
+			Error: true,
+			CustomPatches: types.PatchOperation{
+				Value: make(chan int),
+			},
+		},
+		{
+			Error: true,
+			Container: &corev1.Container{
+				Name: "\"",
+			},
+			CustomPatches: types.PatchOperation{
+				Op: "{{ .PodContainer.Container.Name }}",
 			},
 		},
 	}
@@ -191,8 +225,8 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 				t.Fatal("1 patch must be created")
 			}
 
-			if patchOps[0].Op != test.Expected.Op || patchOps[0].Path != test.Expected.Path {
-				t.Fatalf("not corrected patch %s", patchOps[0].String())
+			if patchOps[0].String() != test.Expected.String() {
+				t.Fatalf("not corrected patch=%s, expected=%s", patchOps[0].String(), test.Expected.String())
 			}
 		})
 	}
