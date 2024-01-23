@@ -14,6 +14,7 @@ package custompatch
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/template"
@@ -28,18 +29,20 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 
 	for _, selectedRule := range containerInfo.SelectedRules {
 		for _, customPatch := range selectedRule.CustomPatches {
-			newPatch := customPatch
+			newPatchBytes, err := json.Marshal(customPatch)
+			if err != nil {
+				return nil, errors.Wrap(err, "error marshal newPatch")
+			}
 
-			var err error
-
-			newPatch.Op, err = template.Get(containerInfo, newPatch.Op)
+			newPatchJSON, err := template.Get(containerInfo, string(newPatchBytes))
 			if err != nil {
 				return nil, errors.Wrap(err, "error parsing template Op")
 			}
 
-			newPatch.Path, err = template.Get(containerInfo, newPatch.Path)
-			if err != nil {
-				return nil, errors.Wrap(err, "error parsing template Path")
+			newPatch := types.PatchOperation{}
+
+			if err := json.Unmarshal([]byte(newPatchJSON), &newPatch); err != nil {
+				return nil, errors.Wrap(err, "error unmarshal newPatch")
 			}
 
 			if p.ignorePatch(newPatch, containerInfo) {
