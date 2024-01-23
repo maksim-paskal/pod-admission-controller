@@ -22,11 +22,11 @@ import (
 
 	"github.com/distribution/reference"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/client"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/conditions"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
-	"github.com/maksim-paskal/pod-admission-controller/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -202,7 +202,7 @@ func (m *Mutation) mutatePod(ctx context.Context, input *MutateInput) *admission
 
 		// check rule that corresponds to container
 		for _, rule := range config.Get().Rules {
-			match, err := utils.CheckConditions(containerInfo, rule.Conditions)
+			match, err := conditions.Check(containerInfo, rule.Conditions)
 			if err != nil {
 				return m.mutateError(namespace.Name, err)
 			}
