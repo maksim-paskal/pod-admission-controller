@@ -10,15 +10,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package utils_test
+package conditions_test
 
 import (
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/maksim-paskal/pod-admission-controller/pkg/conditions"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
-	"github.com/maksim-paskal/pod-admission-controller/pkg/utils"
 )
 
 func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
@@ -315,6 +315,33 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 				},
 			},
 		},
+		{
+			Match: true,
+			Conditions: []types.Conditions{
+				{
+					Key:      ".ContainerName",
+					Operator: "empty",
+				},
+			},
+		},
+		{
+			Match: false,
+			Conditions: []types.Conditions{
+				{
+					Key:      ".ContainerName",
+					Operator: "NotEmpty",
+				},
+			},
+		},
+		{
+			Match: true,
+			Conditions: []types.Conditions{
+				{
+					Key:      ".Namespace",
+					Operator: "NotEmpty",
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -323,7 +350,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		t.Run(fmt.Sprintf("%+v", test), func(t *testing.T) {
 			t.Parallel()
 
-			match, err := utils.CheckConditions(containerInfo, test.Conditions)
+			match, err := conditions.Check(containerInfo, test.Conditions)
 			if test.Error {
 				if err == nil {
 					t.Fatal("must be error")

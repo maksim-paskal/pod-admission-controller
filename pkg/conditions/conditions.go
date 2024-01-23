@@ -10,7 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package utils
+package conditions
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ import (
 
 const negate = "not"
 
-func CheckConditions(containerInfo *types.ContainerInfo, conditions []types.Conditions) (bool, error) { //nolint:cyclop
+func Check(containerInfo *types.ContainerInfo, conditions []types.Conditions) (bool, error) { //nolint:cyclop,funlen,gocognit,lll
 	if len(conditions) == 0 {
 		return true, nil
 	}
@@ -72,6 +72,11 @@ func CheckConditions(containerInfo *types.ContainerInfo, conditions []types.Cond
 			}
 
 			if slices.Contains(condition.Values, key) == conditionRequired {
+				found++
+			}
+		// check if key is empty
+		case "empty", negate + "empty":
+			if (len(key) == 0) == conditionRequired {
 				found++
 			}
 		default:
