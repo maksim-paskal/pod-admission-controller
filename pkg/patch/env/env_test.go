@@ -140,7 +140,7 @@ func TestFormatEnv(t *testing.T) {
 		"TEST1:1/2/3",
 		"TEST2:test",
 		"TEST3:testapp",
-		"TEST4:<no value>",
+		"TEST4:",
 	}
 
 	for i, returnResult := range returnResults {
