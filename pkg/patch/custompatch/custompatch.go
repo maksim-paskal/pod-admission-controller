@@ -73,6 +73,10 @@ func (p *Patch) ignorePatch(patch types.PatchOperation, containerInfo *types.Con
 		if pod.Spec.NodeSelector == nil || len(pod.Spec.NodeSelector) == 0 {
 			return true
 		}
+	case "/spec/topologyspreadconstraints":
+		if pod.Spec.TopologySpreadConstraints == nil || len(pod.Spec.TopologySpreadConstraints) == 0 {
+			return true
+		}
 	case strings.ToLower(containerInfo.PodContainer.ContainerPath() + "/readinessProbe"):
 		if containerInfo.PodContainer.Container.ReadinessProbe == nil {
 			return true

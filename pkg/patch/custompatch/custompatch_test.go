@@ -162,6 +162,16 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 			},
 			CustomPatches: types.PatchOperation{
 				Op:   "remove",
+				Path: "/spec/topologySpreadConstraints",
+			},
+		},
+		{
+			Ignore: true,
+			Container: &corev1.Container{
+				Name: "test",
+			},
+			CustomPatches: types.PatchOperation{
+				Op:   "remove",
 				Path: "{{ .PodContainer.ContainerPath }}/readinessProbe",
 			},
 		},
