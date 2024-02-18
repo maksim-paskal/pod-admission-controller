@@ -14,7 +14,6 @@ package env
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/template"
@@ -51,7 +50,7 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 	if len(containerInfo.PodContainer.Container.Env) == 0 {
 		patch = append(patch, types.PatchOperation{
 			Op:    "add",
-			Path:  fmt.Sprintf("%s/env", containerInfo.PodContainer.ContainerPath()),
+			Path:  containerInfo.PodContainer.ContainerPath() + "/env",
 			Value: formattedEnv,
 		})
 	} else {
@@ -66,7 +65,7 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 			if _, ok := containerEnvName[env.Name]; !ok {
 				patch = append(patch, types.PatchOperation{
 					Op:    "add",
-					Path:  fmt.Sprintf("%s/env/-", containerInfo.PodContainer.ContainerPath()),
+					Path:  containerInfo.PodContainer.ContainerPath() + "/env/-",
 					Value: env,
 				})
 			}

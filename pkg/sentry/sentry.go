@@ -149,7 +149,7 @@ func rawRequest(ctx context.Context, method string, path string) (*http.Request,
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", *config.Get().SentryToken))
+	req.Header.Add("Authorization", "Bearer "+*config.Get().SentryToken)
 
 	return req, nil
 }
