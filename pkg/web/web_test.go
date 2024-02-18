@@ -14,7 +14,6 @@ package web_test
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -32,7 +31,7 @@ var (
 func TestHealthz(t *testing.T) {
 	t.Parallel()
 
-	url := fmt.Sprintf("%s/healthz", ts.URL)
+	url := ts.URL + "/healthz"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

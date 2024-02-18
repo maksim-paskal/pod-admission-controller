@@ -14,7 +14,6 @@ package imagehost
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -75,7 +74,7 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 
 		patch = append(patch, types.PatchOperation{
 			Op:    "replace",
-			Path:  fmt.Sprintf("%s/image", containerInfo.PodContainer.ContainerPath()),
+			Path:  containerInfo.PodContainer.ContainerPath() + "/image",
 			Value: string(result),
 		})
 

@@ -14,7 +14,6 @@ package nonroot
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
@@ -87,7 +86,7 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 
 		patch = append(patch, types.PatchOperation{
 			Op:    "add",
-			Path:  fmt.Sprintf("%s/securityContext", containerInfo.PodContainer.ContainerPath()),
+			Path:  containerInfo.PodContainer.ContainerPath() + "/securityContext",
 			Value: securityContext,
 		})
 
