@@ -41,3 +41,14 @@ rules:
     enabled: true
     from: test.test.com
     to: docker.io
+
+# test replace env
+- envReplace:
+  - name: TEST_REPLACE
+    value: "TEST_REPLACE_VALUE"
+  conditions:
+  - key: .ContainerName
+    operator: in
+    values:
+    - test-env-replace-0
+    - test-env-replace-1

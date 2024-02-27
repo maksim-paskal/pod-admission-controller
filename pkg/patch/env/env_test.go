@@ -22,7 +22,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const addOperation = "add"
+const (
+	addOperation     = "add"
+	replaceOperation = "replace"
+)
 
 func TestCreateEnvPatchEnv(t *testing.T) { //nolint:funlen
 	t.Parallel()
@@ -149,5 +152,60 @@ func TestFormatEnv(t *testing.T) {
 		if v != returnResult {
 			t.Fatalf("must be %s, got %s", returnResult, v)
 		}
+	}
+}
+
+func TestCreateEnvPatchEnvReplace(t *testing.T) {
+	t.Parallel()
+
+	patch := env.Patch{}
+
+	containerInfo := &types.ContainerInfo{
+		PodContainer: &types.PodContainer{
+			Type: "container",
+			Container: &corev1.Container{
+				Env: []corev1.EnvVar{
+					{
+						Name:  "TEST1",
+						Value: "1",
+					},
+					{
+						Name:  "TEST2",
+						Value: "2",
+					},
+				},
+			},
+		},
+		SelectedRules: []*types.Rule{
+			{
+				EnvReplace: []corev1.EnvVar{
+					{
+						Name:  "TEST1",
+						Value: "3",
+					},
+					{
+						Name:  "TEST4",
+						Value: "4",
+					},
+				},
+			},
+		},
+	}
+
+	envPatch, err := patch.Create(context.TODO(), containerInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(envPatch) != 2 {
+		t.Fatal("2 patch must be created")
+	}
+
+	if envPatch[0].Op != replaceOperation || envPatch[0].Path != "/spec/containers/0/env/TEST1" {
+		t.Fatalf("not corrected patch %s", envPatch[0].String())
+	}
+
+	if envPatch[1].Op != addOperation || envPatch[1].Path != "/spec/containers/0/env/-" {
+		t.Fatalf("not corrected patch %s", envPatch[1].String())
 	}
 }

@@ -1,1 +1,1 @@
-{"limits":{"memory":"500Mi"},"requests":{"cpu":"100m","memory":"500Mi"}}
+{"limits":{"memory":"33Mi"},"requests":{"cpu":"13m","memory":"33Mi"}}

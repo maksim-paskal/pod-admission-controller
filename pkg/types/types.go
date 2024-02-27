@@ -73,6 +73,7 @@ type AddDefaultResources struct {
 type Rule struct {
 	Debug                     bool
 	Name                      string
+	EnvReplace                []corev1.EnvVar
 	Env                       []corev1.EnvVar
 	Conditions                []Condition
 	AddDefaultResources       AddDefaultResources
@@ -209,6 +210,16 @@ func (c *ContainerInfo) GetSelectedRulesEnv() []corev1.EnvVar {
 
 	for _, selectedRule := range c.SelectedRules {
 		containerEnv = append(containerEnv, selectedRule.Env...)
+	}
+
+	return containerEnv
+}
+
+func (c *ContainerInfo) GetSelectedRulesEnvReplace() []corev1.EnvVar {
+	containerEnv := make([]corev1.EnvVar, 0)
+
+	for _, selectedRule := range c.SelectedRules {
+		containerEnv = append(containerEnv, selectedRule.EnvReplace...)
 	}
 
 	return containerEnv

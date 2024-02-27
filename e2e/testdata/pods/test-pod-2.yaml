@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: test-pod-admission-controller
+  annotations:
+    pod-admission-controller/defaultResourcesCPU: "11m"
+    pod-admission-controller/defaultResourcesMemory: "33Mi"
+  name: test-pod-2
+spec:
+  terminationGracePeriodSeconds: 0
+  securityContext:
+    runAsUser: 1000
+  initContainers:
+  - name: test-env-replace-0
+    image: alpine:latest
+  containers:
+  - name: test-env-replace-1
+    image: alpine:latest
+    env:
+    - name: TEST_REPLACE
+      value: default
+    command:
+    - sleep
+    - 1d

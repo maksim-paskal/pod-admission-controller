@@ -24,6 +24,67 @@ import (
 
 type Patch struct{}
 
+type processContainerEnvInput struct {
+	containerInfo *types.ContainerInfo
+	formattedEnv  []corev1.EnvVar
+	replace       bool
+}
+
+func (p *Patch) processContainerEnv(input *processContainerEnvInput) []types.PatchOperation {
+	if len(input.formattedEnv) == 0 {
+		return []types.PatchOperation{}
+	}
+
+	// if container has no env, return one patch to add all env
+	if len(input.containerInfo.PodContainer.Container.Env) == 0 {
+		return []types.PatchOperation{
+			{
+				Op:    "add",
+				Path:  input.containerInfo.PodContainer.ContainerPath() + "/env",
+				Value: input.formattedEnv,
+			},
+		}
+	}
+
+	patch := make([]types.PatchOperation, 0)
+
+	containerEnvName := make(map[string]bool, 0)
+	// get all env from container
+	for _, env := range input.containerInfo.PodContainer.Container.Env {
+		containerEnvName[env.Name] = true
+	}
+
+	for _, env := range input.formattedEnv {
+		_, containerHasThisEnv := containerEnvName[env.Name]
+
+		if input.replace {
+			if containerHasThisEnv {
+				patch = append(patch, types.PatchOperation{
+					Op:    "replace",
+					Path:  input.containerInfo.PodContainer.ContainerPath() + "/env/" + env.Name,
+					Value: env.Value,
+				})
+			} else {
+				patch = append(patch, types.PatchOperation{
+					Op:    "add",
+					Path:  input.containerInfo.PodContainer.ContainerPath() + "/env/-",
+					Value: env,
+				})
+			}
+		} else {
+			if !containerHasThisEnv {
+				patch = append(patch, types.PatchOperation{
+					Op:    "add",
+					Path:  input.containerInfo.PodContainer.ContainerPath() + "/env/-",
+					Value: env,
+				})
+			}
+		}
+	}
+
+	return patch
+}
+
 func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([]types.PatchOperation, error) {
 	// some containers don't need env
 	// pod-admission-controller/ignoreEnv=container1,container2
@@ -36,41 +97,28 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 		}
 	}
 
+	patch := make([]types.PatchOperation, 0)
+
 	formattedEnv, err := p.FormatEnv(containerInfo, containerInfo.GetSelectedRulesEnv())
 	if err != nil {
 		return nil, errors.Wrap(err, "error format env")
 	}
 
-	if len(formattedEnv) == 0 {
-		return []types.PatchOperation{}, nil
+	patch = append(patch, p.processContainerEnv(&processContainerEnvInput{
+		containerInfo: containerInfo,
+		formattedEnv:  formattedEnv,
+	})...)
+
+	formattedEnv, err = p.FormatEnv(containerInfo, containerInfo.GetSelectedRulesEnvReplace())
+	if err != nil {
+		return nil, errors.Wrap(err, "error format env")
 	}
 
-	patch := make([]types.PatchOperation, 0)
-
-	if len(containerInfo.PodContainer.Container.Env) == 0 {
-		patch = append(patch, types.PatchOperation{
-			Op:    "add",
-			Path:  containerInfo.PodContainer.ContainerPath() + "/env",
-			Value: formattedEnv,
-		})
-	} else {
-		containerEnvName := make(map[string]bool, 0)
-		// get all env from container
-		for _, env := range containerInfo.PodContainer.Container.Env {
-			containerEnvName[env.Name] = true
-		}
-
-		for _, env := range formattedEnv {
-			// add env if not exists
-			if _, ok := containerEnvName[env.Name]; !ok {
-				patch = append(patch, types.PatchOperation{
-					Op:    "add",
-					Path:  containerInfo.PodContainer.ContainerPath() + "/env/-",
-					Value: env,
-				})
-			}
-		}
-	}
+	patch = append(patch, p.processContainerEnv(&processContainerEnvInput{
+		containerInfo: containerInfo,
+		formattedEnv:  formattedEnv,
+		replace:       true,
+	})...)
 
 	return patch, nil
 }
