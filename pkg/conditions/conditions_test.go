@@ -13,16 +13,18 @@ limitations under the License.
 package conditions_test
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/conditions"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
+	log "github.com/sirupsen/logrus"
 )
 
 func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 	t.Parallel()
+	log.SetLevel(log.DebugLevel)
 
 	os.Setenv("TEST_ENV", "test") //nolint:tenv
 
@@ -43,14 +45,14 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 
 	type testStruct struct {
 		Error      bool
-		Conditions []types.Conditions
+		Conditions []types.Condition
 		Match      bool
 	}
 
 	tests := []testStruct{
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.ABC",
 					Operator: "in",
@@ -60,7 +62,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.ABC",
 					Operator: "NotIn",
@@ -70,7 +72,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.ABC",
 					Operator: "in",
@@ -80,7 +82,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.ABC",
 					Operator: "notin",
@@ -90,7 +92,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.SOMEFAKE",
 					Operator: "notin",
@@ -100,7 +102,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Error: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.ABC",
 					Operator: "in",
@@ -110,7 +112,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image.Name",
 					Operator: "equal",
@@ -120,7 +122,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image.Name",
 					Operator: "notequal",
@@ -130,7 +132,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image.Name",
 					Operator: "equal",
@@ -140,7 +142,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image",
 					Operator: "regexp",
@@ -150,7 +152,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image",
 					Operator: "notRegexp",
@@ -160,7 +162,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image",
 					Operator: "regexp",
@@ -170,7 +172,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Namespace",
 					Operator: "equal",
@@ -180,7 +182,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Namespace",
 					Operator: "equal",
@@ -190,7 +192,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".PodAnnotations.env",
 					Operator: "equal",
@@ -200,7 +202,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".PodAnnotations.env",
 					Operator: "equal",
@@ -210,7 +212,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.env",
 					Operator: "equal",
@@ -220,7 +222,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.env",
 					Operator: "equal",
@@ -230,7 +232,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.KKK",
 					Operator: "notequal",
@@ -240,7 +242,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      `env "TEST_ENV"`,
 					Operator: "equal",
@@ -250,7 +252,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      `env "TEST_ENV"`,
 					Operator: "equal",
@@ -260,11 +262,11 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match:      true,
-			Conditions: []types.Conditions{},
+			Conditions: []types.Condition{},
 		},
 		{
 			Error: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Namespace",
 					Operator: "unknownOperator",
@@ -273,7 +275,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Error: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key: "unknownKey",
 				},
@@ -281,7 +283,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Error: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key: "",
 				},
@@ -289,7 +291,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Error: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image",
 					Operator: "regexp",
@@ -299,7 +301,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Error: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image",
 					Operator: "equal",
@@ -308,7 +310,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Error: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".Image",
 					Operator: "regexp",
@@ -317,7 +319,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".ContainerName",
 					Operator: "empty",
@@ -326,7 +328,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".ContainerName",
 					Operator: "NotEmpty",
@@ -335,7 +337,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: true,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.SOMEFAKE",
 					Operator: "Empty",
@@ -344,7 +346,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 		{
 			Match: false,
-			Conditions: []types.Conditions{
+			Conditions: []types.Condition{
 				{
 					Key:      ".NamespaceAnnotations.SOMEFAKE",
 					Operator: "NotEmpty",
@@ -353,11 +355,17 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 		},
 	}
 
-	for _, test := range tests {
+	for testID, test := range tests {
 		test := test
 
-		t.Run(fmt.Sprintf("%+v", test), func(t *testing.T) {
+		t.Run(strconv.Itoa(testID), func(t *testing.T) {
 			t.Parallel()
+
+			t.Logf("%+v", test)
+
+			for conditionID, condition := range test.Conditions {
+				test.Conditions[conditionID].Operator = condition.Operator.Value()
+			}
 
 			match, err := conditions.Check(containerInfo, test.Conditions)
 			if test.Error {

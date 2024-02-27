@@ -15,6 +15,7 @@ package config_test
 import (
 	"flag"
 	"testing"
+	"time"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
 )
@@ -40,8 +41,25 @@ func TestConfig(t *testing.T) {
 		t.Fatal("not valid SentryToken")
 	}
 
-	if err := config.Check(); err != nil {
+	if err := config.Validate(); err != nil {
 		t.Fatal("not valid config")
+	}
+
+	if period := config.Get().GetGracePeriod(); period != 5*time.Second {
+		t.Fatalf("not valid grace period %s", period)
+	}
+
+	// not valid
+	if err := flag.Set("config", "testdata/not-valid-config.yaml"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := config.Load(); err != nil {
+		t.Fatal("config not loaded")
+	}
+
+	if err := config.Validate(); err == nil {
+		t.Fatal("must be not valid config")
 	}
 }
 

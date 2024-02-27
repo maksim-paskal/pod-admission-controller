@@ -15,7 +15,10 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -71,7 +74,7 @@ type Rule struct {
 	Debug                     bool
 	Name                      string
 	Env                       []corev1.EnvVar
-	Conditions                []Conditions
+	Conditions                []Condition
 	AddDefaultResources       AddDefaultResources
 	RunAsNonRoot              RunAsNonRoot
 	ReplaceContainerImageHost ReplaceContainerImageHost
@@ -103,9 +106,57 @@ func (p *PatchOperation) String() string {
 	return string(out)
 }
 
-type Conditions struct {
+// must be lowercase.
+type ConditionOperator string
+
+func (op ConditionOperator) Value() ConditionOperator {
+	return ConditionOperator(strings.ToLower(string(op)))
+}
+
+func (op ConditionOperator) Validate() error {
+	if slices.Contains(validOperators, op) {
+		return nil
+	}
+
+	return errors.Errorf("unknown operator %s", op)
+}
+
+func (op ConditionOperator) IsNegate() bool {
+	return slices.Contains(negateOperators, op)
+}
+
+const (
+	OperatorEqual     ConditionOperator = "equal"
+	OperatorNotEqual  ConditionOperator = "notequal"
+	OperatorRegexp    ConditionOperator = "regexp"
+	OperatorNotRegexp ConditionOperator = "notregexp"
+	OperatorIn        ConditionOperator = "in"
+	OperatorNotIn     ConditionOperator = "notin"
+	OperatorEmpty     ConditionOperator = "empty"
+	OperatorNotEmpty  ConditionOperator = "notempty"
+)
+
+var negateOperators = []ConditionOperator{
+	OperatorNotEqual,
+	OperatorNotRegexp,
+	OperatorNotIn,
+	OperatorNotEmpty,
+}
+
+var validOperators = []ConditionOperator{
+	OperatorEqual,
+	OperatorNotEqual,
+	OperatorRegexp,
+	OperatorNotRegexp,
+	OperatorIn,
+	OperatorNotIn,
+	OperatorEmpty,
+	OperatorNotEmpty,
+}
+
+type Condition struct {
 	Key      string
-	Operator string
+	Operator ConditionOperator
 	Value    string
 	Values   []string
 }
