@@ -19,7 +19,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.22'
     - name: Build
       run: go run github.com/goreleaser/goreleaser@latest build --clean --snapshot --skip=validate
     - name: Copy binary
