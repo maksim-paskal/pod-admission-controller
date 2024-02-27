@@ -15,17 +15,17 @@ package template
 import (
 	"bytes"
 	"net"
-	"os"
 	"regexp"
 	"text/template"
 
+	"github.com/Masterminds/sprig"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/sentry"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
 )
 
 func Get(containerInfo *types.ContainerInfo, value string) (string, error) {
-	tmpl, err := template.New("tmpl").Option("missingkey=zero").Funcs(template.FuncMap{
+	tmpl, err := template.New("tmpl").Option("missingkey=zero").Funcs(sprig.FuncMap()).Funcs(template.FuncMap{
 		// regexp string by pattern
 		"regexp": func(pattern string, value string) []string {
 			return regexp.MustCompile(pattern).FindStringSubmatch(value)
@@ -62,7 +62,6 @@ func Get(containerInfo *types.ContainerInfo, value string) (string, error) {
 
 			return ip.String()
 		},
-		"env": os.Getenv,
 	}).Parse(value)
 	if err != nil {
 		return "", errors.Wrap(err, "error parsing template")
