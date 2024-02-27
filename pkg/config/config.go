@@ -86,10 +86,25 @@ func Load() error {
 		return errors.Wrap(err, "error in yaml.Unmarshal")
 	}
 
+	for ruleID, rule := range param.Rules {
+		for conditionID, condition := range rule.Conditions {
+			// normalize operator
+			param.Rules[ruleID].Conditions[conditionID].Operator = condition.Operator.Value()
+		}
+	}
+
 	return nil
 }
 
-func Check() error {
+func Validate() error {
+	for _, rule := range param.Rules {
+		for _, condition := range rule.Conditions {
+			if err := condition.Operator.Validate(); err != nil {
+				return errors.Wrap(err, "error in validating operator")
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -16,16 +16,13 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
-	"strings"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/template"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
 )
 
-const negate = "not"
-
-func Check(containerInfo *types.ContainerInfo, conditions []types.Conditions) (bool, error) { //nolint:cyclop,funlen,gocognit,lll
+func Check(containerInfo *types.ContainerInfo, conditions []types.Condition) (bool, error) { //nolint:cyclop,funlen,gocognit,lll
 	if len(conditions) == 0 {
 		return true, nil
 	}
@@ -42,10 +39,14 @@ func Check(containerInfo *types.ContainerInfo, conditions []types.Conditions) (b
 			return false, errors.Wrap(err, "error matching key")
 		}
 
-		conditionRequired := !strings.HasPrefix(strings.ToLower(condition.Operator), negate)
+		if err := condition.Operator.Validate(); err != nil {
+			return false, errors.Wrap(err, "error validating operator")
+		}
 
-		switch strings.ToLower(condition.Operator) {
-		case "equal", negate + "equal":
+		conditionRequired := !condition.Operator.IsNegate()
+
+		switch condition.Operator {
+		case types.OperatorEqual, types.OperatorNotEqual:
 			if len(condition.Value) == 0 {
 				return false, errors.Errorf("empty value for operator %s", condition.Operator)
 			}
@@ -53,7 +54,7 @@ func Check(containerInfo *types.ContainerInfo, conditions []types.Conditions) (b
 			if (key == condition.Value) == conditionRequired {
 				found++
 			}
-		case "regexp", negate + "regexp":
+		case types.OperatorRegexp, types.OperatorNotRegexp:
 			if len(condition.Value) == 0 {
 				return false, errors.Errorf("empty value for operator %s", condition.Operator)
 			}
@@ -66,7 +67,7 @@ func Check(containerInfo *types.ContainerInfo, conditions []types.Conditions) (b
 			if match == conditionRequired {
 				found++
 			}
-		case "in", negate + "in":
+		case types.OperatorIn, types.OperatorNotIn:
 			if len(condition.Values) == 0 {
 				return false, errors.Errorf("empty values for operator %s", condition.Operator)
 			}
@@ -75,7 +76,7 @@ func Check(containerInfo *types.ContainerInfo, conditions []types.Conditions) (b
 				found++
 			}
 		// check if key is empty
-		case "empty", negate + "empty":
+		case types.OperatorEmpty, types.OperatorNotEmpty:
 			if (len(key) == 0) == conditionRequired {
 				found++
 			}

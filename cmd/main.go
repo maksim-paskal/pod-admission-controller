@@ -53,7 +53,7 @@ func main() { //nolint:funlen
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
-	if err := config.Check(); err != nil {
+	if err := config.Validate(); err != nil {
 		log.Info(config.Get())
 		log.WithError(err).Fatal()
 	}
