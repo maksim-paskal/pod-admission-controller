@@ -21,7 +21,7 @@ import (
 )
 
 func TestTemplateValue(t *testing.T) {
-	t.Parallel()
+	t.Setenv("SOME_TEST_ENV", "test")
 
 	containerInfo := &types.ContainerInfo{
 		Image: &types.ContainerImage{Name: "/a/b/c/d:e"},
@@ -35,6 +35,8 @@ func TestTemplateValue(t *testing.T) {
 	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" "/1/2/3/4:main") 3 }}`] = "unknown"
 	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" .Image.Name) 2 }}`] = "e"
 	cases[`{{ ResolveFallback "fakedomain.fakedomain" "fakefallback" }}`] = "fakefallback"
+	cases[`{{ env "SOME_TEST_ENV" }}`] = "test"
+	cases[`{{ env "SOME_TEST_ENV" | replace "te" "de" }}`] = "dest"
 
 	for k, v := range cases {
 		value, err := template.Get(containerInfo, k)
