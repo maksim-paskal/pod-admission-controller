@@ -18,6 +18,7 @@ import (
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGetPodAnnotation(t *testing.T) {
@@ -131,5 +132,48 @@ func TestContainerPath(t *testing.T) {
 
 	if got := podContainer.ContainerPath(); got != "/spec/initContainers/0" {
 		t.Fatalf("expected /spec/initContainers/0, got %s", got)
+	}
+}
+
+func TestPodContainer(t *testing.T) {
+	t.Parallel()
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind: "Pod",
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{
+				{
+					Name: "test-init",
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Name: "test",
+				},
+			},
+		},
+	}
+
+	podContainers := types.PodContainersFromPod(namespace, pod)
+
+	if req := 2; len(podContainers) != req {
+		t.Fatalf("expected to find %d, got %d", req, len(podContainers))
+	}
+
+	if req := "Pod"; podContainers[0].OwnerKind() != req {
+		t.Fatalf("expected to find %s, got %s", req, podContainers[0].OwnerKind())
 	}
 }

@@ -232,6 +232,15 @@ func (c *PodContainer) String() string {
 	return string(out)
 }
 
+// return owner kind of the pod.
+func (c *PodContainer) OwnerKind() string {
+	if len(c.Pod.OwnerReferences) > 0 {
+		return c.Pod.OwnerReferences[0].Kind
+	}
+
+	return ""
+}
+
 func (c *PodContainer) ContainerPath() string {
 	return fmt.Sprintf("/spec/%ss/%d", c.Type, c.Order)
 }
