@@ -171,7 +171,7 @@ type ContainerImage struct {
 type ContainerInfo struct {
 	PodContainer         *PodContainer
 	ContainerName        string
-	ContainerType        string
+	ContainerType        PodContainerType
 	Namespace            string
 	NamespaceAnnotations map[string]string
 	NamespaceLabels      map[string]string
@@ -214,13 +214,19 @@ func (c *ContainerInfo) GetSelectedRulesEnv() []corev1.EnvVar {
 	return containerEnv
 }
 
+type PodContainerType string
+
+const (
+	PodContainerTypeInitContainer PodContainerType = "initContainer"
+	PodContainerTypeContainer     PodContainerType = "container"
+)
+
 type PodContainer struct {
-	Pod           *corev1.Pod
-	Namespace     *corev1.Namespace
-	Order         int
-	Type          string
-	Container     *corev1.Container
-	ContainerInfo *ContainerInfo
+	Pod       *corev1.Pod
+	Namespace *corev1.Namespace
+	Order     int
+	Type      PodContainerType
+	Container *corev1.Container
 }
 
 func (c *PodContainer) String() string {
@@ -253,7 +259,7 @@ func PodContainersFromPod(namespace *corev1.Namespace, pod *corev1.Pod) []*PodCo
 			Pod:       pod,
 			Namespace: namespace,
 			Order:     order,
-			Type:      "initContainer",
+			Type:      PodContainerTypeInitContainer,
 			Container: &pod.Spec.InitContainers[order],
 		})
 	}
@@ -263,7 +269,7 @@ func PodContainersFromPod(namespace *corev1.Namespace, pod *corev1.Pod) []*PodCo
 			Pod:       pod,
 			Namespace: namespace,
 			Order:     order,
-			Type:      "container",
+			Type:      PodContainerTypeContainer,
 			Container: &pod.Spec.Containers[order],
 		})
 	}
