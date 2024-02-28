@@ -22,6 +22,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+func ParseConditionKey(containerInfo *types.ContainerInfo, condition types.Condition) (string, error) {
+	key, err := template.Get(containerInfo, fmt.Sprintf("{{ %s }}", condition.Key))
+	if err != nil {
+		return "", errors.Wrapf(err, "error getting key %s", condition.Key)
+	}
+
+	return key, nil
+}
+
 func Check(containerInfo *types.ContainerInfo, conditions []types.Condition) (bool, error) { //nolint:cyclop,funlen,gocognit,lll
 	if len(conditions) == 0 {
 		return true, nil
@@ -34,7 +43,7 @@ func Check(containerInfo *types.ContainerInfo, conditions []types.Condition) (bo
 			return false, errors.Errorf("empty key")
 		}
 
-		key, err := template.Get(containerInfo, fmt.Sprintf("{{ %s }}", condition.Key))
+		key, err := ParseConditionKey(containerInfo, condition)
 		if err != nil {
 			return false, errors.Wrap(err, "error matching key")
 		}
@@ -80,8 +89,6 @@ func Check(containerInfo *types.ContainerInfo, conditions []types.Condition) (bo
 			if (len(key) == 0) == conditionRequired {
 				found++
 			}
-		default:
-			return false, errors.Errorf("unknown operator %s", condition.Operator)
 		}
 	}
 
