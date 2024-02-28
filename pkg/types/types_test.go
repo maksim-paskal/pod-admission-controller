@@ -257,3 +257,24 @@ func TestPatchOperation(t *testing.T) {
 		t.Fatal("expected to find json")
 	}
 }
+
+func TestConditionValidation(t *testing.T) {
+	t.Parallel()
+
+	condition := types.Condition{
+		Operator: types.OperatorEmpty,
+	}
+
+	if condition.Validate() != nil {
+		t.Fatal("expected to find nil")
+	}
+
+	condition = types.Condition{
+		Operator: types.OperatorRegexp,
+		Value:    "[]|[test-data]|][]",
+	}
+
+	if condition.Validate() == nil {
+		t.Fatal("expected to find error")
+	}
+}

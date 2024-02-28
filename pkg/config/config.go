@@ -101,6 +101,10 @@ func Load() error {
 func Validate() error {
 	for _, rule := range param.Rules {
 		for _, condition := range rule.Conditions {
+			if err := condition.Validate(); err != nil {
+				return errors.Wrap(err, "error in validating condition")
+			}
+
 			if err := condition.Operator.Validate(); err != nil {
 				return errors.Wrap(err, "error in validating operator")
 			}
