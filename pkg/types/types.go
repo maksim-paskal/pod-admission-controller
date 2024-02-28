@@ -240,7 +240,28 @@ func (c *PodContainer) String() string {
 	return string(out)
 }
 
+// return string array of pods pvc names.
+// usage: .PodContainer.PodPVCNames
+// example: ["pvc1", "pvc2"]
+func (c *PodContainer) PodPVCNames() []string {
+	result := make([]string, 0)
+
+	for _, volume := range c.Pod.Spec.Volumes {
+		if volume.PersistentVolumeClaim != nil {
+			claimName := volume.PersistentVolumeClaim.ClaimName
+
+			if !slices.Contains(result, claimName) {
+				result = append(result, volume.PersistentVolumeClaim.ClaimName)
+			}
+		}
+	}
+
+	return result
+}
+
 // return owner kind of the pod.
+// usage: .PodContainer.OwnerKind
+// example: ReplicaSet
 func (c *PodContainer) OwnerKind() string {
 	if len(c.Pod.OwnerReferences) > 0 {
 		return c.Pod.OwnerReferences[0].Kind

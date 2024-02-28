@@ -176,4 +176,84 @@ func TestPodContainer(t *testing.T) {
 	if req := "Pod"; podContainers[0].OwnerKind() != req {
 		t.Fatalf("expected to find %s, got %s", req, podContainers[0].OwnerKind())
 	}
+
+	if podContainers[0].String() == "" {
+		t.Fatal("expected to find json")
+	}
+}
+
+func TestPodContainerPodPVCNames(t *testing.T) {
+	t.Parallel()
+
+	podContainer := types.PodContainer{
+		Pod: &corev1.Pod{
+			Spec: corev1.PodSpec{
+				Volumes: []corev1.Volume{
+					{
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: "test-pvc-01",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if req := 1; len(podContainer.PodPVCNames()) != req {
+		t.Fatalf("expected to find %d, got %d", req, len(podContainer.PodPVCNames()))
+	}
+
+	if req := "test-pvc-01"; podContainer.PodPVCNames()[0] != req {
+		t.Fatalf("expected to find %s, got %s", req, podContainer.PodPVCNames()[0])
+	}
+}
+
+func TestPodContainerOwnerKind(t *testing.T) {
+	t.Parallel()
+
+	podContainer := types.PodContainer{
+		Pod: &corev1.Pod{},
+	}
+
+	if podContainer.OwnerKind() != "" {
+		t.Fatalf("expected to empty, got %s", podContainer.OwnerKind())
+	}
+}
+
+func TestConditionOperator(t *testing.T) {
+	t.Parallel()
+
+	conditionOperator := types.ConditionOperator("EmPtY")
+
+	if conditionOperator.Validate() == nil {
+		t.Fatal("expected to find error")
+	}
+
+	if err := conditionOperator.Value().Validate(); err != nil {
+		t.Fatalf("expected to find nil, got %s", err)
+	}
+
+	if conditionOperator.Value().IsNegate() != false {
+		t.Fatalf("expected to find false, got %t", conditionOperator.Value().IsNegate())
+	}
+
+	if conditionOperator.Value() != types.OperatorEmpty {
+		t.Fatalf("expected to find %s, got %s", types.OperatorEmpty, conditionOperator.Value())
+	}
+}
+
+func TestPatchOperation(t *testing.T) {
+	t.Parallel()
+
+	patchOperation := types.PatchOperation{
+		Op:    "MyOp",
+		Path:  "MyPath",
+		Value: "MyValue",
+	}
+
+	if got := patchOperation.String(); got == "" {
+		t.Fatal("expected to find json")
+	}
 }

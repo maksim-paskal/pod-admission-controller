@@ -20,7 +20,30 @@ import (
 	"github.com/maksim-paskal/pod-admission-controller/pkg/conditions"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestParseConditionKey(t *testing.T) {
+	t.Parallel()
+
+	condition := types.Condition{
+		Key: ".Namespace",
+	}
+
+	containerInfo := &types.ContainerInfo{
+		Namespace: "1234567890",
+	}
+
+	key, err := conditions.ParseConditionKey(containerInfo, condition)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if key != "1234567890" {
+		t.Fatalf("must be 1234567890, got %s", key)
+	}
+}
 
 func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 	t.Parallel()
@@ -31,6 +54,47 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 	containerInfo := &types.ContainerInfo{
 		Namespace: "1234567890",
 		Image:     &types.ContainerImage{Name: "alpine:3.12"},
+		PodContainer: &types.PodContainer{
+			Pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "v1",
+							Kind:       "ReplicaSet",
+							Name:       "test",
+						},
+					},
+				},
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: "test-volume-01",
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "test-pvc-01",
+								},
+							},
+						},
+						{
+							Name: "test-volume-02",
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "test-pvc-02",
+								},
+							},
+						},
+						{
+							Name: "test-volume-03",
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "test-pvc-02",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		PodAnnotations: map[string]string{
 			"asd": "erty",
 			"env": "test",
@@ -353,6 +417,26 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 				},
 			},
 		},
+		{
+			Match: true,
+			Conditions: []types.Condition{
+				{
+					Key:      ".PodContainer.PodPVCNames",
+					Operator: "equal",
+					Value:    "[test-pvc-01 test-pvc-02]",
+				},
+			},
+		},
+		{
+			Match: true,
+			Conditions: []types.Condition{
+				{
+					Key:      ".PodContainer.OwnerKind",
+					Operator: "equal",
+					Value:    "ReplicaSet",
+				},
+			},
+		},
 	}
 
 	for testID, test := range tests {
@@ -365,6 +449,13 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 
 			for conditionID, condition := range test.Conditions {
 				test.Conditions[conditionID].Operator = condition.Operator.Value()
+
+				keyValue, err := conditions.ParseConditionKey(containerInfo, condition)
+				if err != nil {
+					t.Logf("error in parsing key: %s, %s", condition.Key, err)
+				} else {
+					t.Logf("key %s=%s", condition.Key, keyValue)
+				}
 			}
 
 			match, err := conditions.Check(containerInfo, test.Conditions)
