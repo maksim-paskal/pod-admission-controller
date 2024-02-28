@@ -2,6 +2,18 @@ apiVersion: v1
 entries:
   pod-admission-controller:
   - apiVersion: v2
+    created: "2024-02-28T12:31:41.477088027Z"
+    description: pod mutating admission controller
+    digest: 695201d4f9d096a9bde595c05d970afd08ca1ff4d5b43c6fdb9b1e98fcca235d
+    icon: https://helm.sh/img/helm.svg
+    maintainers:
+    - email: paskal.maksim@gmail.com
+      name: maksim-paskal
+    name: pod-admission-controller
+    urls:
+    - https://github.com/maksim-paskal/pod-admission-controller/releases/download/helm-chart-0.0.6/pod-admission-controller-0.0.6.tgz
+    version: 0.0.6
+  - apiVersion: v2
     created: "2023-12-14T08:30:04.901534287Z"
     description: pod mutating admission controller
     digest: 7f5a83441f86bf64b422803b18f2b70a49ba771be0aa494ffe1f3e926b4dfee6
