@@ -14,6 +14,7 @@ package resources
 
 import (
 	"context"
+	"flag"
 	"strings"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
@@ -27,14 +28,19 @@ const (
 	defaultContainerResourceMemory = "500Mi"
 )
 
+var (
+	containerResourceCPU    = flag.String("resources.default.cpu", defaultContainerResourceCPU, "Default CPU requests")
+	containerResourceMemory = flag.String("resources.default.memory", defaultContainerResourceMemory, "Default Memory requests") //nolint:lll
+)
+
 type Patch struct{}
 
 // get default resources from pod annotations
 // pod-admission-controller/defaultResourcesCPU=100m
 // pod-admission-controller/defaultResourcesMemory=500Mi.
 func (p *Patch) GetDefaultResources(containerInfo *types.ContainerInfo) (resource.Quantity, resource.Quantity) {
-	defaultRequestCPU := resource.MustParse(defaultContainerResourceCPU)
-	defaultRequestMemory := resource.MustParse(defaultContainerResourceMemory)
+	defaultRequestCPU := resource.MustParse(*containerResourceCPU)
+	defaultRequestMemory := resource.MustParse(*containerResourceMemory)
 
 	if defaultResource, ok := containerInfo.GetPodAnnotation(types.AnnotationDefaultResourcesCPU); ok {
 		resourceCPU, err := resource.ParseQuantity(defaultResource)

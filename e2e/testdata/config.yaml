@@ -1,3 +1,9 @@
+createSecrets:
+- name: test-secret
+  type: Opaque
+  data:
+    "test": "dmFsdWUK"
+
 rules:
 # rule for test namespace
 - runasnonroot:

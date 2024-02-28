@@ -24,6 +24,7 @@ import (
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/client"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/config"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +35,9 @@ const (
 	podNamesPrefix = "test-pod-"
 )
 
-var (
-	updateRequirements = flag.Bool("updateRequirements", false, "update requirements")
-	ctx                = context.Background()
-)
+var updateRequirements = flag.Bool("updateRequirements", false, "update requirements")
 
-func Test(t *testing.T) { //nolint:cyclop
+func TestMutation(t *testing.T) { //nolint:funlen
 	t.Parallel()
 
 	if err := flag.Set("config", "testdata/config.yaml"); err != nil {
@@ -54,46 +52,202 @@ func Test(t *testing.T) { //nolint:cyclop
 		t.Fatal(err)
 	}
 
-	pods, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app=test-pod-admission-controller",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	ctx := context.TODO()
 
-	for _, pod := range pods.Items {
-		podIndexString := strings.TrimPrefix(pod.Name, podNamesPrefix)
+	t.Run("pods", func(t *testing.T) {
+		t.Parallel()
 
-		podIndex, err := strconv.Atoi(podIndexString)
+		pods, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: "app=test-pod-admission-controller",
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// remove kubernetes annotations from pod annotations
-		standartPodAnnotations := pod.Annotations
-		delete(standartPodAnnotations, "kubectl.kubernetes.io/last-applied-configuration")
-		delete(standartPodAnnotations, "kubernetes.io/psp")
+		for _, pod := range pods.Items {
+			t.Run(pod.Name, func(t *testing.T) {
+				t.Parallel()
 
-		if err = compareObject(pod.Annotations, podIndex, "Annotations"); err != nil {
-			t.Errorf("pod Annotations %d %s", podIndex, err)
+				if err := testPod(pod); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	})
+
+	t.Run("secrets", func(t *testing.T) {
+		t.Parallel()
+
+		if err := testSecret(ctx); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("ingresses", func(t *testing.T) {
+		t.Parallel()
+
+		type test struct {
+			name              string
+			requireAnnotation bool
+			requiredHosts     []string
+			requiredTLSHosts  []string
 		}
 
-		if err = compareObject(pod.Labels, podIndex, "Labels"); err != nil {
-			t.Errorf("pod Labels %d %s", podIndex, err)
+		tests := []test{
+			{
+				name:              "test-ingress-0",
+				requireAnnotation: true,
+				requiredHosts: []string{
+					"aaaa.sometestdomain.com",
+					"aaaa.com",
+					"aaaa.sometestdomain.com",
+				},
+				requiredTLSHosts: []string{
+					"aaaa.sometestdomain.com",
+					"aaaa.com",
+				},
+			},
+			{
+				name:              "test-ingress-1",
+				requireAnnotation: true,
+				requiredHosts: []string{
+					"bbbb.abracodabra.com",
+					"bbbb.com",
+					"bbbb.abracodabra.com",
+				},
+				requiredTLSHosts: []string{
+					"bbbb.abracodabra.com",
+					"bbbb.com",
+				},
+			},
+			{
+				name:              "test-ingress-2",
+				requireAnnotation: false,
+				requiredHosts: []string{
+					"cccc.com",
+				},
+				requiredTLSHosts: []string{
+					"cccc.com",
+				},
+			},
 		}
 
-		for containerOrder := range pod.Spec.InitContainers {
-			if err := CheckInitContainer(podIndex, containerOrder, pod.Spec.InitContainers); err != nil {
-				t.Errorf("InitContainers %d/%d %s", podIndex, containerOrder, err)
-			}
-		}
+		for _, test := range tests {
+			test := test
 
-		for containerOrder := range pod.Spec.Containers {
-			if err := CheckContainer(podIndex, containerOrder, pod.Spec.Containers); err != nil {
-				t.Errorf("Containers %d/%d %s", podIndex, containerOrder, err)
-			}
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				if err := testIngress(ctx,
+					test.name,
+					test.requireAnnotation,
+					test.requiredHosts,
+					test.requiredTLSHosts,
+				); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	})
+}
+
+func testPod(pod corev1.Pod) error {
+	podIndexString := strings.TrimPrefix(pod.Name, podNamesPrefix)
+
+	podIndex, err := strconv.Atoi(podIndexString)
+	if err != nil {
+		return errors.Wrap(err, "error in strconv.Atoi")
+	}
+
+	// remove kubernetes annotations from pod annotations
+	standartPodAnnotations := pod.Annotations
+	delete(standartPodAnnotations, "kubectl.kubernetes.io/last-applied-configuration")
+	delete(standartPodAnnotations, "kubernetes.io/psp")
+
+	if err = compareObject(pod.Annotations, podIndex, "Annotations"); err != nil {
+		return errors.Wrap(err, "error in compareObject pod.Annotations")
+	}
+
+	if err = compareObject(pod.Labels, podIndex, "Labels"); err != nil {
+		return errors.Wrap(err, "error in compareObject pod.Labels")
+	}
+
+	for containerOrder := range pod.Spec.InitContainers {
+		if err := checkInitContainer(podIndex, containerOrder, pod.Spec.InitContainers); err != nil {
+			return errors.Errorf("InitContainers %d/%d %s", podIndex, containerOrder, err)
 		}
 	}
+
+	for containerOrder := range pod.Spec.Containers {
+		if err := checkContainer(podIndex, containerOrder, pod.Spec.Containers); err != nil {
+			return errors.Errorf("Containers %d/%d %s", podIndex, containerOrder, err)
+		}
+	}
+
+	return nil
+}
+
+func testIngress(ctx context.Context, name string, requireAnnotation bool, requiredHosts, requiredTLSHosts []string) error { //nolint:lll
+	ingress, err := client.KubeClient().NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "error in ingress get")
+	}
+
+	if _, ok := ingress.Annotations[types.AnnotationInjected]; !ok == requireAnnotation {
+		return errors.Errorf("ingress must have injected annotation %s", ingress.Annotations)
+	}
+
+	if req := len(requiredHosts); len(ingress.Spec.Rules) != req {
+		return errors.Errorf("ingress must have %d rules", req)
+	}
+
+	for hostID, host := range requiredHosts {
+		if ingress.Spec.Rules[hostID].Host != host {
+			return errors.Errorf("host %d, req=%s, got=%s", hostID, host, ingress.Spec.Rules[hostID].Host)
+		}
+	}
+
+	if req := 1; len(ingress.Spec.TLS) != req {
+		return errors.Errorf("ingress must have %d tls", req)
+	}
+
+	if req := len(requiredTLSHosts); len(ingress.Spec.TLS[0].Hosts) != req {
+		return errors.Errorf("ingress must have %d tls hosts", req)
+	}
+
+	for hostID, host := range requiredTLSHosts {
+		if ingress.Spec.TLS[0].Hosts[hostID] != host {
+			return errors.Errorf("tls host %d, req=%s, got=%s", hostID, host, ingress.Spec.TLS[0].Hosts[hostID])
+		}
+	}
+
+	return nil
+}
+
+func testSecret(ctx context.Context) error {
+	secret, err := client.KubeClient().CoreV1().Secrets(namespace).Get(ctx, "test-secret", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "error in secret get")
+	}
+
+	if req := 1; len(secret.Data) != req {
+		return errors.Errorf("secret must have %d data", req)
+	}
+
+	if req := 1; len(secret.Data) != req {
+		return errors.Errorf("secret must have %d data", req)
+	}
+
+	secretValue, ok := secret.Data["test"]
+	if !ok {
+		return errors.Errorf("secret must have test key")
+	}
+
+	if val := string(secretValue); val != "value\n" {
+		return errors.Errorf("secret value not correct %s", val)
+	}
+
+	return nil
 }
 
 func compareObject(obj interface{}, podOrder int, filePath string) error {
@@ -129,7 +283,7 @@ func compareObject(obj interface{}, podOrder int, filePath string) error {
 	return nil
 }
 
-func CheckInitContainer(podIndex int, containerOrder int, initContainers []corev1.Container) error {
+func checkInitContainer(podIndex int, containerOrder int, initContainers []corev1.Container) error {
 	initContainer := initContainers[containerOrder]
 	filePrefix := fmt.Sprintf("initContainers/%d", containerOrder)
 
@@ -148,7 +302,7 @@ func CheckInitContainer(podIndex int, containerOrder int, initContainers []corev
 	return nil
 }
 
-func CheckContainer(podIndex int, containerOrder int, containers []corev1.Container) error {
+func checkContainer(podIndex int, containerOrder int, containers []corev1.Container) error {
 	container := containers[containerOrder]
 	filePrefix := fmt.Sprintf("containers/%d", containerOrder)
 

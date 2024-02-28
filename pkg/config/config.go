@@ -46,6 +46,7 @@ type Params struct {
 	SentryToken    *string
 	SentryDSN      *string
 	CreateSecrets  []*types.CreateSecret
+	IngressSuffix  *string
 }
 
 var param = Params{
@@ -61,6 +62,7 @@ var param = Params{
 	SentryEndpoint:     flag.String("sentry.endpoint", "", "sentry endpoint"),
 	SentryToken:        flag.String("sentry.token", "", "sentry token"),
 	SentryDSN:          flag.String("sentry.dsn", os.Getenv("SENTRY_DSN"), "sentry DSN for error reporting"),
+	IngressSuffix:      flag.String("ingress.suffix", os.Getenv("INGRESS_SUFFIX"), "default ingress suffix"),
 }
 
 func (p *Params) GetGracePeriod() time.Duration {

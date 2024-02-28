@@ -14,11 +14,15 @@ webhooks:
       namespace: pod-admission-controller
       path: "/mutate"
   rules:
+  - operations: ["CREATE","UPDATE"]
+    apiGroups: ["networking.k8s.io"]
+    apiVersions: ["v1"]
+    resources: ["ingresses"]
   - operations: ["CREATE"]
     apiGroups: [""]
     apiVersions: ["v1"]
     resources: ["pods"]
-  - operations: ["UPDATE"]
+  - operations: ["CREATE","UPDATE"]
     apiGroups: [""]
     apiVersions: ["v1"]
     resources: ["namespaces"]

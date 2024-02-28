@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-ingress-1
+  annotations:
+    pod-admission-controller/ingressSuffix: "abracodabra.com"
+spec:
+  rules:
+  - host: "bbbb."
+    http:
+      paths:
+      - path: /testpath
+        pathType: Prefix
+        backend:
+          service:
+            name: test
+            port:
+              number: 80
+  - host: "bbbb.com"
+    http:
+      paths:
+      - path: /testpath
+        pathType: Prefix
+        backend:
+          service:
+            name: test
+            port:
+              number: 80
+  - host: "bbbb."
+    http:
+      paths:
+      - path: /testpath2
+        pathType: Prefix
+        backend:
+          service:
+            name: test
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - "bbbb."
+    - "bbbb.com"
+    secretName: testsecret
