@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        k3s_version: ["v1.26.11+k3s2","v1.27.8+k3s2","v1.28.4+k3s2"]
+        k3s_version: ["v1.27.8+k3s2","v1.28.4+k3s2","v1.29.1+k3s2"]
         helm_version: ["v3.8.1"]
     steps:
     - name: Setup Kubernetes
