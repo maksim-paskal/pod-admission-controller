@@ -15,6 +15,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -120,7 +121,7 @@ func (op ConditionOperator) Validate() error {
 		return nil
 	}
 
-	return errors.Errorf("unknown operator %s", op)
+	return errors.Errorf("unknown operator %s, valid operators %s", op, validOperators)
 }
 
 func (op ConditionOperator) IsNegate() bool {
@@ -161,6 +162,16 @@ type Condition struct {
 	Operator ConditionOperator
 	Value    string
 	Values   []string
+}
+
+func (c *Condition) Validate() error {
+	if c.Operator == OperatorRegexp || c.Operator == OperatorNotRegexp {
+		if _, err := regexp.Compile(c.Value); err != nil {
+			return errors.Wrapf(err, "error in regexp %s", c.Value)
+		}
+	}
+
+	return nil
 }
 
 type ContainerImage struct {
