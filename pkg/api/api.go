@@ -31,6 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,6 +49,28 @@ type MutateInput struct {
 	AdmissionReview *admissionv1.AdmissionReview
 }
 
+func (m *MutateInput) GetObjectName() string {
+	result := m.GetType()
+
+	if m != nil && m.AdmissionReview != nil && m.AdmissionReview.Request != nil {
+		req := m.AdmissionReview.Request
+
+		if len(req.Namespace) > 0 {
+			result += "/" + req.Namespace
+		}
+
+		if len(req.Name) > 0 {
+			result += "/" + req.Name
+		}
+
+		if len(req.UID) > 0 {
+			result += "/" + string(req.UID)
+		}
+	}
+
+	return result
+}
+
 func (m *MutateInput) GetNamespace(ctx context.Context) (*corev1.Namespace, error) {
 	if m.Namespace != nil {
 		return m.Namespace, nil
@@ -62,7 +85,17 @@ func (m *MutateInput) GetNamespace(ctx context.Context) (*corev1.Namespace, erro
 }
 
 func (m *MutateInput) GetType() string {
-	return m.AdmissionReview.Request.Resource.Resource
+	resourceType := m.AdmissionReview.Request.Resource.Resource
+
+	if len(m.AdmissionReview.Request.Resource.Group) > 0 {
+		resourceType += "." + m.AdmissionReview.Request.Resource.Group
+	}
+
+	if len(m.AdmissionReview.Request.Resource.Version) > 0 {
+		resourceType += "." + m.AdmissionReview.Request.Resource.Version
+	}
+
+	return resourceType
 }
 
 type Mutation struct{}
@@ -72,11 +105,15 @@ func NewMutation() *Mutation {
 }
 
 func (m *Mutation) Mutate(ctx context.Context, input *MutateInput) *admissionv1.AdmissionResponse {
+	log.Infof("mutate %s", input.GetObjectName())
+
 	switch input.GetType() {
-	case "pods":
+	case "pods.v1":
 		return m.mutatePod(ctx, input)
-	case "namespaces":
+	case "namespaces.v1":
 		return m.mutateNamespace(ctx, input)
+	case "ingresses.networking.k8s.io.v1":
+		return m.mutateIngress(ctx, input)
 	}
 
 	return m.mutateError(string(input.AdmissionReview.Request.UID), errors.Errorf("unknown resource type %s", input.GetType())) //nolint:lll
@@ -114,6 +151,98 @@ func (m *Mutation) createSecret(ctx context.Context, namespace string, secret *t
 	}
 
 	return nil
+}
+
+func (m *Mutation) replaceIngressHost(ingress networkingv1.Ingress, host string) (string, bool) {
+	ingressSuffix := *config.Get().IngressSuffix
+
+	if ingress.Annotations != nil {
+		if suffix, ok := ingress.Annotations[types.AnnotationDefaultIngressSuffix]; ok {
+			ingressSuffix = suffix
+		}
+	}
+
+	if len(ingressSuffix) == 0 {
+		return host, false
+	}
+
+	if strings.HasSuffix(host, ".") {
+		return host + ingressSuffix, true
+	}
+
+	return host, false
+}
+
+func (m *Mutation) mutateIngressHosts(ingress networkingv1.Ingress) []types.PatchOperation {
+	mutationPatch := make([]types.PatchOperation, 0)
+
+	for ruleID, rule := range ingress.Spec.Rules {
+		if host, ok := m.replaceIngressHost(ingress, rule.Host); ok {
+			mutationPatch = append(mutationPatch, types.PatchOperation{
+				Op:    "replace",
+				Path:  fmt.Sprintf("/spec/rules/%d/host", ruleID),
+				Value: host,
+			})
+		}
+	}
+
+	for tlsID, tls := range ingress.Spec.TLS {
+		for hostID, host := range tls.Hosts {
+			if newHost, ok := m.replaceIngressHost(ingress, host); ok {
+				mutationPatch = append(mutationPatch, types.PatchOperation{
+					Op:    "replace",
+					Path:  fmt.Sprintf("/spec/tls/%d/hosts/%d", tlsID, hostID),
+					Value: newHost,
+				})
+			}
+		}
+	}
+
+	return mutationPatch
+}
+
+func (m *Mutation) mutateIngress(_ context.Context, input *MutateInput) *admissionv1.AdmissionResponse {
+	req := input.AdmissionReview.Request
+
+	ingress := networkingv1.Ingress{}
+
+	if err := json.Unmarshal(req.Object.Raw, &ingress); err != nil {
+		return m.mutateError(ingress.Name, err)
+	}
+
+	if m.checkIgnoreAnnotation(ingress.Annotations) {
+		metrics.MutationsIgnored.WithLabelValues(ingress.Name).Inc()
+
+		return &admissionv1.AdmissionResponse{
+			Allowed: true,
+			Warnings: []string{
+				fmt.Sprintf("%s, ingress %s", types.WarningObjectDoedNotNeedMutation, ingress.Name),
+			},
+		}
+	}
+
+	mutationPatch := make([]types.PatchOperation, 0)
+
+	mutationPatch = append(mutationPatch, m.mutateIngressHosts(ingress)...)
+	mutationPatch = append(mutationPatch, m.injectAnnotation(ingress.Annotations))
+
+	patchBytes, err := json.Marshal(mutationPatch)
+	if err != nil {
+		return m.mutateError(ingress.Name, err)
+	}
+
+	return &admissionv1.AdmissionResponse{
+		Allowed: true,
+		Result: &metav1.Status{
+			Status: metav1.StatusSuccess,
+		},
+		Patch: patchBytes,
+		PatchType: func() *admissionv1.PatchType {
+			pt := admissionv1.PatchTypeJSONPatch
+
+			return &pt
+		}(),
+	}
 }
 
 func (m *Mutation) mutateNamespace(ctx context.Context, input *MutateInput) *admissionv1.AdmissionResponse { //nolint:lll
@@ -245,8 +374,6 @@ func (m *Mutation) mutatePod(ctx context.Context, input *MutateInput) *admission
 	if err != nil {
 		return m.mutateError(namespace.Name, err)
 	}
-
-	log.Infof("mutate %s/%s", req.Namespace, req.UID)
 
 	log.Debugf("patch=%s", string(patchBytes))
 

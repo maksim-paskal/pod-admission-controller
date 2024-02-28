@@ -93,6 +93,7 @@ func TestMutation(t *testing.T) { //nolint:funlen
 					Namespace: "test",
 					Resource: metav1.GroupVersionResource{
 						Resource: "pods",
+						Version:  "v1",
 					},
 					Object: runtime.RawExtension{
 						Raw: podJSON,

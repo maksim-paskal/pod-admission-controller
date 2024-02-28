@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-ingress-2
+  annotations:
+    pod-admission-controller/ignore: "true"
+spec:
+  rules:
+  - host: "cccc.com"
+    http:
+      paths:
+      - path: /testpath
+        pathType: Prefix
+        backend:
+          service:
+            name: test
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - "cccc.com"
+    secretName: testsecret

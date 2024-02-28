@@ -39,6 +39,8 @@ const (
 	AnnotationDefaultResourcesCPU = annotationPrefix + "/defaultResourcesCPU"
 	// Default Memory requests.
 	AnnotationDefaultResourcesMemory = annotationPrefix + "/defaultResourcesMemory"
+	// ingress default suffix.
+	AnnotationDefaultIngressSuffix = annotationPrefix + "/ingressSuffix"
 	// warning when AnnotationIgnore is enabled.
 	WarningObjectDoedNotNeedMutation = annotationPrefix + ": ignore mutation by annotation " + AnnotationIgnore
 	// warning when no patch is generated.

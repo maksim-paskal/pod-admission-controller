@@ -21,11 +21,11 @@ coverage:
 
 .PHONY: e2e
 e2e:
-	make deploy config=./e2e/testdata/config.yaml
+	make deploy config=./e2e/testdata/config.yaml helm_args="$(helm_args) --values=./e2e/values.yaml"
 	kubectl delete ns $(testnamespace) || true
 	kubectl create ns $(testnamespace)
 	kubectl label ns $(testnamespace) environment=dev
-	kubectl -n $(testnamespace) apply -f ./e2e/testdata/pods
+	kubectl -n $(testnamespace) apply -f ./e2e/testdata/kubernetes
 	kubectl -n $(testnamespace) wait --for=condition=Ready=true pods -lapp=test-pod-admission-controller --timeout=60s
 	go test -v ./e2e -kubeconfig=$(KUBECONFIG)
 	kubectl delete ns $(testnamespace)
