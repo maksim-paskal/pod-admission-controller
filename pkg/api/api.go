@@ -55,6 +55,10 @@ func (m *MutateInput) GetObjectName() string {
 	if m != nil && m.AdmissionReview != nil && m.AdmissionReview.Request != nil {
 		req := m.AdmissionReview.Request
 
+		if len(req.Operation) > 0 {
+			result += "/" + string(req.Operation)
+		}
+
 		if len(req.Namespace) > 0 {
 			result += "/" + req.Namespace
 		}
