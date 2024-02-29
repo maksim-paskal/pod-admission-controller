@@ -22,7 +22,9 @@ webhooks:
     apiGroups: [""]
     apiVersions: ["v1"]
     resources: ["pods"]
-  - operations: ["CREATE","UPDATE"]
+  # create operation for namespace doesn't work,
+  # because secret creation requires namespace to exist
+  - operations: ["UPDATE"]
     apiGroups: [""]
     apiVersions: ["v1"]
     resources: ["namespaces"]

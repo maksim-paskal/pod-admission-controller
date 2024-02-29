@@ -28,6 +28,7 @@ e2e:
 	kubectl -n $(testnamespace) apply -f ./e2e/testdata/kubernetes
 	kubectl -n $(testnamespace) wait --for=condition=Ready=true pods -lapp=test-pod-admission-controller --timeout=60s
 	go test -v ./e2e -kubeconfig=$(KUBECONFIG)
+	kubectl -n pod-admission-controller logs --all-containers -lapp=pod-admission-controller
 	kubectl delete ns $(testnamespace)
 
 testChart:
