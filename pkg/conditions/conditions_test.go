@@ -440,8 +440,6 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 	}
 
 	for testID, test := range tests {
-		test := test
-
 		t.Run(strconv.Itoa(testID), func(t *testing.T) {
 			t.Parallel()
 

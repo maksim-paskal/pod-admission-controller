@@ -22,6 +22,7 @@ import (
 	"github.com/maksim-paskal/pod-admission-controller/pkg/sentry"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 func Get(containerInfo *types.ContainerInfo, value string) (string, error) {
@@ -39,8 +40,8 @@ func Get(containerInfo *types.ContainerInfo, value string) (string, error) {
 			return slice[part]
 		},
 		// return sentry DSN based on image name
-		"GetSentryDSN": func(projectSlug string) string {
-			if dsn, ok := sentry.GetCache()[projectSlug]; ok {
+		"GetSentryDSN": func(namespace, path string) string {
+			if dsn, ok := sentry.GetSentryDSN(namespace, path); ok {
 				return dsn
 			}
 
@@ -64,15 +65,17 @@ func Get(containerInfo *types.ContainerInfo, value string) (string, error) {
 		},
 	}).Parse(value)
 	if err != nil {
-		return "", errors.Wrap(err, "error parsing template")
+		return "", errors.Wrapf(err, "error parsing template %s", value)
 	}
 
 	var tpl bytes.Buffer
 
 	err = tmpl.Execute(&tpl, containerInfo)
 	if err != nil {
-		return "", errors.Wrap(err, "error executing template")
+		return "", errors.Wrapf(err, "error executing template %s", value)
 	}
+
+	log.Debugf("Get: %s, Out: %s", value, tpl.String())
 
 	return tpl.String(), nil
 }

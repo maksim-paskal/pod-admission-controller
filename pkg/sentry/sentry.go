@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -25,10 +26,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const defaultHTTPTimeout = 5 * time.Second
+const defaultHTTPTimeout = 30 * time.Second
 
 var client = &http.Client{
-	Timeout: defaultHTTPTimeout,
+	Jar:     nil,
+	Timeout: defaultHTTPTimeout + time.Minute,
 }
 
 type KeyDsn struct {
@@ -37,6 +39,23 @@ type KeyDsn struct {
 
 type Key struct {
 	Dsn KeyDsn
+}
+
+func (k *Key) GetRelayDSN() string {
+	urlDSN, err := url.Parse(k.Dsn.Public)
+	if err != nil {
+		return k.Dsn.Public
+	}
+
+	urlRelay, err := url.Parse(config.Get().Sentry.Relay)
+	if err != nil {
+		return k.Dsn.Public
+	}
+
+	urlDSN.Scheme = urlRelay.Scheme
+	urlDSN.Host = urlRelay.Host
+
+	return urlDSN.String()
 }
 
 type Organization struct {
@@ -50,12 +69,59 @@ type Project struct {
 
 var cache map[string]string
 
-func GetCache() map[string]string {
-	return cache
+func getCachedDSN(namespace, projectSlug string) (string, bool) {
+	prefixes := []string{""}
+
+	if userPrefixes := config.Get().Sentry.GetPrefixes(namespace); len(userPrefixes) > 0 {
+		prefixes = append(prefixes, userPrefixes...)
+	}
+
+	log.Debugf("find %s with prefixes=%+v", projectSlug, prefixes)
+
+	for _, p := range prefixes {
+		if dsn, ok := cache[p+projectSlug]; ok {
+			return dsn, true
+		}
+	}
+
+	return "", false
+}
+
+func GetSentryDSN(namespace, imagePath string) (string, bool) {
+	// if cache is not created, return false
+	if cache == nil {
+		return "", false
+	}
+
+	log.Debug("Check for imagePath=", imagePath)
+
+	for projectSlug, projectImagePath := range config.Get().Sentry.Projects {
+		log.Debugf("Check for projectImagePath=%s, imagePath=%s", projectImagePath, imagePath)
+
+		if strings.HasPrefix(projectImagePath, imagePath) || strings.HasPrefix(imagePath, projectImagePath) {
+			if dsn, ok := getCachedDSN(namespace, projectSlug); ok {
+				return dsn, true
+			}
+		}
+	}
+
+	return "", false
 }
 
 func CreateCache(ctx context.Context) error {
-	if len(*config.Get().SentryEndpoint) == 0 || len(*config.Get().SentryToken) == 0 {
+	if config.Get().Sentry == nil {
+		return nil
+	}
+
+	if len(config.Get().Sentry.Cache) > 0 {
+		log.Info("Using Sentry cache from config...")
+
+		cache = config.Get().Sentry.Cache
+
+		return nil
+	}
+
+	if len(config.Get().Sentry.Endpoint) == 0 || len(config.Get().Sentry.Token) == 0 {
 		return nil
 	}
 
@@ -75,18 +141,29 @@ func CreateCache(ctx context.Context) error {
 
 		keys, err := GetProjectKeys(ctx, project)
 		if err != nil {
-			return errors.Wrap(err, "failed to get keys")
+			return errors.Wrapf(err, "failed to get keys, project=%+v", project)
 		}
-
-		log.Debugf("%s=%s", project.Slug, keys[0].Dsn.Public)
 
 		cache[project.Slug] = keys[0].Dsn.Public
 	}
+
+	var cacheStruct strings.Builder
+
+	cacheStruct.WriteString("cache:")
+
+	for k, v := range cache {
+		cacheStruct.WriteString("\n  " + k + ": " + v)
+	}
+
+	log.Debug(cacheStruct.String())
 
 	return nil
 }
 
 func GetProjects(ctx context.Context) ([]Project, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultHTTPTimeout)
+	defer cancel()
+
 	req, err := rawRequest(ctx, http.MethodGet, "/api/0/projects/")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request")
@@ -98,19 +175,24 @@ func GetProjects(ctx context.Context) ([]Project, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("result not OK")
+		return nil, errors.Errorf("result not OK, status=%d", response.StatusCode)
 	}
 
 	defer response.Body.Close()
 
 	projects := []Project{}
 
-	err = json.NewDecoder(response.Body).Decode(&projects)
+	if err := json.NewDecoder(response.Body).Decode(&projects); err != nil {
+		return nil, errors.Wrap(err, "failed to decode response")
+	}
 
-	return projects, errors.Wrap(err, "failed to decode response")
+	return projects, nil
 }
 
 func GetProjectKeys(ctx context.Context, project Project) ([]Key, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultHTTPTimeout)
+	defer cancel()
+
 	url := fmt.Sprintf("/api/0/projects/%s/%s/keys/", project.Organization.Slug, project.Slug)
 
 	req, err := rawRequest(ctx, http.MethodGet, url)
@@ -124,22 +206,29 @@ func GetProjectKeys(ctx context.Context, project Project) ([]Key, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("result not OK")
+		return nil, errors.Errorf("result not OK, status=%d", response.StatusCode)
 	}
-
-	defer response.Body.Close()
 
 	defer response.Body.Close()
 
 	keys := []Key{}
 
-	err = json.NewDecoder(response.Body).Decode(&keys)
+	if err := json.NewDecoder(response.Body).Decode(&keys); err != nil {
+		return nil, errors.Wrap(err, "failed to decode response")
+	}
 
-	return keys, errors.Wrap(err, "failed to decode response")
+	if len(config.Get().Sentry.Relay) == 0 {
+		return keys, nil
+	}
+
+	// change DSN to relay DSN
+	keys[0].Dsn.Public = keys[0].GetRelayDSN()
+
+	return keys, nil
 }
 
 func rawRequest(ctx context.Context, method string, path string) (*http.Request, error) {
-	endpoint := fmt.Sprintf("%s%s", strings.TrimRight(*config.Get().SentryEndpoint, "/"), path)
+	endpoint := fmt.Sprintf("%s%s", strings.TrimRight(config.Get().Sentry.Endpoint, "/"), path)
 
 	log.Debugf("Sending request to: %s", endpoint)
 
@@ -149,7 +238,7 @@ func rawRequest(ctx context.Context, method string, path string) (*http.Request,
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+*config.Get().SentryToken)
+	req.Header.Add("Authorization", "Bearer "+config.Get().Sentry.Token)
 
 	return req, nil
 }

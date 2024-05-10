@@ -498,6 +498,7 @@ func GetImageInfo(image string) (*types.ContainerImage, error) {
 
 	result := types.ContainerImage{
 		Domain: reference.Domain(refName),
+		Path:   reference.Path(refName),
 		Name:   image,
 		Slug:   strings.Trim(imageName, "-"),
 		Tag:    "latest",
@@ -522,8 +523,18 @@ func TestPOD(ctx context.Context, namespace, podName string) ([]byte, error) {
 	}
 
 	input := &MutateInput{
+		Namespace: &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+		},
 		AdmissionReview: &admissionv1.AdmissionReview{
 			Request: &admissionv1.AdmissionRequest{
+				Resource: metav1.GroupVersionResource{
+					Group:    "",
+					Version:  "v1",
+					Resource: "pods",
+				},
 				Object: runtime.RawExtension{
 					Raw: podJSON,
 				},

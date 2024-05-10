@@ -130,36 +130,42 @@ func TestGetImageInfo(t *testing.T) {
 
 	tests["10.10.10.10:5000/product/main/backend:release-20220516-1"] = &types.ContainerImage{
 		Domain: "10.10.10.10:5000",
+		Path:   "product/main/backend",
 		Name:   "10.10.10.10:5000/product/main/backend:release-20220516-1",
 		Slug:   "product-main-backend",
 		Tag:    "release-20220516-1",
 	}
 	tests["10.10.10.10:5000/product/main/front:release-20220516-1"] = &types.ContainerImage{
 		Domain: "10.10.10.10:5000",
+		Path:   "product/main/front",
 		Name:   "10.10.10.10:5000/product/main/front:release-20220516-1",
 		Slug:   "product-main-front",
 		Tag:    "release-20220516-1",
 	}
 	tests["domain.com/hipages/php-fpm_exporter:1"] = &types.ContainerImage{
 		Domain: "domain.com",
+		Path:   "hipages/php-fpm_exporter",
 		Name:   "domain.com/hipages/php-fpm_exporter:1",
 		Slug:   "hipages-php-fpm-exporter",
 		Tag:    "1",
 	}
 	tests["domain.com/paskalmaksim/envoy-docker-image:v0.3.8"] = &types.ContainerImage{
 		Domain: "domain.com",
+		Path:   "paskalmaksim/envoy-docker-image",
 		Name:   "domain.com/paskalmaksim/envoy-docker-image:v0.3.8",
 		Slug:   "paskalmaksim-envoy-docker-image",
 		Tag:    "v0.3.8",
 	}
 	tests["paskalmaksim/envoy-docker-image:v0.3.8"] = &types.ContainerImage{
 		Domain: "docker.io",
+		Path:   "paskalmaksim/envoy-docker-image",
 		Name:   "paskalmaksim/envoy-docker-image:v0.3.8",
 		Slug:   "paskalmaksim-envoy-docker-image",
 		Tag:    "v0.3.8",
 	}
 	tests["paskalmaksim/envoy-docker-image"] = &types.ContainerImage{
 		Domain: "docker.io",
+		Path:   "paskalmaksim/envoy-docker-image",
 		Name:   "paskalmaksim/envoy-docker-image",
 		Slug:   "paskalmaksim-envoy-docker-image",
 		Tag:    "latest",
@@ -172,7 +178,7 @@ func TestGetImageInfo(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(requre, formattedImage) {
-			t.Fatalf("must be %s, got %s", requre, formattedImage)
+			t.Fatalf("must be:\n%+v, got:\n%+v", requre, formattedImage)
 		}
 	}
 }

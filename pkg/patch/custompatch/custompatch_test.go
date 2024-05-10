@@ -193,8 +193,6 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 	}
 
 	for _, test := range tests {
-		test := test
-
 		t.Run(fmt.Sprintf("%+v", test), func(t *testing.T) {
 			t.Parallel()
 

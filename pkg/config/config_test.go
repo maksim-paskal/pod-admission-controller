@@ -14,6 +14,7 @@ package config_test
 
 import (
 	"flag"
+	"reflect"
 	"testing"
 	"time"
 
@@ -33,11 +34,11 @@ func TestConfig(t *testing.T) {
 
 	t.Log("config:", config.Get().String())
 
-	if *config.Get().SentryEndpoint != "1" {
+	if *config.Get().CertFile != "1" {
 		t.Fatal("not valid SentryEndpoint")
 	}
 
-	if *config.Get().SentryToken != "2" {
+	if *config.Get().KeyFile != "2" {
 		t.Fatal("not valid SentryToken")
 	}
 
@@ -68,5 +69,32 @@ func TestVersion(t *testing.T) {
 
 	if config.GetVersion() != "dev" {
 		t.Fatal("version is not dev")
+	}
+}
+
+func TestSentryPrefix(t *testing.T) {
+	param := &config.Params{
+		Sentry: &config.Sentry{
+			Prefixes: []*config.SentryPrefix{
+				{
+					Pattern: "^test$",
+					Name:    "testname",
+				},
+			},
+		},
+	}
+
+	if prefix := param.Sentry.GetPrefixes("aa"); len(prefix) != 0 {
+		t.Fatal("not valid prefix aa")
+	}
+
+	if prefix := param.Sentry.GetPrefixes("test"); len(prefix) != 1 || prefix[0] != "testname" {
+		t.Fatal("not valid prefix test")
+	}
+
+	t.Setenv("SENTRY_PROJECTS_PREFIX", "test2,test3")
+
+	if prefix := param.Sentry.GetPrefixes("test"); !reflect.DeepEqual(prefix, []string{"testname", "test2", "test3"}) {
+		t.Fatal("not valid prefix test2, not valid: ", prefix)
 	}
 }
