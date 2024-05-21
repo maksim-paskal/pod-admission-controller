@@ -80,9 +80,7 @@ func (p *Patch) FormatEnv(containerInfo *types.ContainerInfo, containersEnv []co
 
 	formattedEnv := make([]corev1.EnvVar, 0)
 
-	for _, containerEnv := range containersEnv {
-		item := containerEnv
-
+	for _, item := range containersEnv {
 		item.Value, err = template.Get(containerInfo, item.Value)
 		if err != nil {
 			return nil, errors.Wrap(err, "error template value")

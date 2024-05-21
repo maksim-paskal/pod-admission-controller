@@ -16,10 +16,13 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -28,6 +31,50 @@ const (
 	defaultAddr        = ":8443"
 	defaultMetricsAddr = ":31080"
 )
+
+type SentryPrefix struct {
+	Pattern string
+	Name    string
+}
+
+type Sentry struct {
+	Endpoint     string
+	Token        string
+	Organization string
+	Prefixes     []*SentryPrefix
+	// replace sentry DSN with replay
+	Relay string
+	// project slug -> image path
+	Projects map[string]string
+	Cache    map[string]string
+}
+
+func (s *Sentry) GetPrefixes(name string) []string {
+	result := make([]string, 0)
+
+	for _, prefix := range s.Prefixes {
+		if prefix.Pattern == "" {
+			continue
+		}
+
+		re2, err := regexp.Compile(prefix.Pattern)
+		if err != nil {
+			log.Warnf("error in %s regexp.Compile: %v", prefix.Pattern, err)
+
+			continue
+		}
+
+		if re2.MatchString(name) {
+			result = append(result, prefix.Name)
+		}
+	}
+
+	if prefix := os.Getenv("SENTRY_PROJECTS_PREFIX"); len(prefix) > 0 {
+		result = append(result, strings.Split(prefix, ",")...)
+	}
+
+	return result
+}
 
 type Params struct {
 	GracePeriodSeconds *int
@@ -40,13 +87,10 @@ type Params struct {
 	CertFile           *string
 	KeyFile            *string
 	Rules              []*types.Rule
-	// DefaultRequestCPU    *string
-	// DefaultRequestMemory *string
-	SentryEndpoint *string
-	SentryToken    *string
-	SentryDSN      *string
-	CreateSecrets  []*types.CreateSecret
-	IngressSuffix  *string
+	Sentry             *Sentry
+	SentryDSN          *string
+	CreateSecrets      []*types.CreateSecret
+	IngressSuffix      *string
 }
 
 var param = Params{
@@ -59,8 +103,6 @@ var param = Params{
 	MetricsAddr:        flag.String("metrics.listen", defaultMetricsAddr, "address to listen on metrics"),
 	CertFile:           flag.String("cert", "server.crt", "certificate file"),
 	KeyFile:            flag.String("key", "server.key", "key file"),
-	SentryEndpoint:     flag.String("sentry.endpoint", "", "sentry endpoint"),
-	SentryToken:        flag.String("sentry.token", "", "sentry token"),
 	SentryDSN:          flag.String("sentry.dsn", os.Getenv("SENTRY_DSN"), "sentry DSN for error reporting"),
 	IngressSuffix:      flag.String("ingress.suffix", os.Getenv("INGRESS_SUFFIX"), "default ingress suffix"),
 }
@@ -71,6 +113,10 @@ func (p *Params) GetGracePeriod() time.Duration {
 
 func Get() *Params {
 	return &param
+}
+
+func Set(config Params) {
+	param = config
 }
 
 func Load() error {

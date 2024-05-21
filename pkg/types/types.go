@@ -176,6 +176,7 @@ func (c *Condition) Validate() error {
 
 type ContainerImage struct {
 	Domain string
+	Path   string
 	Name   string
 	Slug   string
 	Tag    string

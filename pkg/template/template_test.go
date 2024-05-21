@@ -30,7 +30,7 @@ func TestTemplateValue(t *testing.T) {
 	cases := make(map[string]string)
 
 	cases[`{{ index (regexp "/(.+):(.+)$" .Image.Name) 2 }}`] = "e"
-	cases[`{{ GetSentryDSN (index (regexp "/(.+):(.+)$" .Image.Name) 1) }}`] = ""
+	cases[`{{ GetSentryDSN "" (index (regexp "/(.+):(.+)$" .Image.Name) 1) }}`] = ""
 	cases[`{{ index (regexp "/(.+):(.+)$" "/1/2/3/4:main") 2 }}`] = "main"
 	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" "/1/2/3/4:main") 3 }}`] = "unknown"
 	cases[`{{ indexUnknown (regexp "/(.+):(.+)$" .Image.Name) 2 }}`] = "e"

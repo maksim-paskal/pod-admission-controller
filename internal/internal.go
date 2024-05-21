@@ -64,7 +64,7 @@ func Start(ctx context.Context) error {
 
 		log.Info("Creating patch.json...")
 
-		if err := os.WriteFile("patch.json", patchBytes, 0o600); err != nil { //nolint:gomnd
+		if err := os.WriteFile("patch.json", patchBytes, 0o600); err != nil { //nolint:gomnd,mnd
 			log.WithError(err).Error()
 		}
 
