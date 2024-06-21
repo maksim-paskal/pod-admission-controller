@@ -26,6 +26,8 @@ import (
 
 const (
 	annotationPrefix = "pod-admission-controller"
+	// label for namespaces that managed by pod-admission-controller.
+	LabelManaged = annotationPrefix + "/managed"
 	// annotation that will added to pod if mutation executes.
 	AnnotationInjected = annotationPrefix + "/injected"
 	// skip mutation.

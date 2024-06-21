@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/distribution/reference"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/client"
@@ -27,6 +28,7 @@ import (
 	"github.com/maksim-paskal/pod-admission-controller/pkg/metrics"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -242,14 +244,14 @@ func (m *Mutation) mutateIngress(_ context.Context, input *MutateInput) *admissi
 		},
 		Patch: patchBytes,
 		PatchType: func() *admissionv1.PatchType {
-			pt := admissionv1.PatchTypeJSONPatch
-
-			return &pt
+			return utils.Pnt(admissionv1.PatchTypeJSONPatch)
 		}(),
 	}
 }
 
-func (m *Mutation) mutateNamespace(ctx context.Context, input *MutateInput) *admissionv1.AdmissionResponse { //nolint:lll
+const waitForNamespaceCreation = 10 * time.Second
+
+func (m *Mutation) mutateNamespace(ctx context.Context, input *MutateInput) *admissionv1.AdmissionResponse { //nolint:lll,funlen
 	req := input.AdmissionReview.Request
 
 	namespace := corev1.Namespace{}
@@ -269,10 +271,39 @@ func (m *Mutation) mutateNamespace(ctx context.Context, input *MutateInput) *adm
 		}
 	}
 
-	for _, secret := range config.Get().CreateSecrets {
-		if err := m.createSecret(ctx, namespace.Name, secret); err != nil {
-			return m.mutateError(namespace.Name, err)
+	createSecrets := func(ctx context.Context) {
+		for _, secret := range config.Get().CreateSecrets {
+			if err := m.createSecret(ctx, namespace.Name, secret); err != nil {
+				log.WithError(err).Errorf("Error creating secret %s/%s", namespace.Name, secret.Name)
+			}
 		}
+	}
+
+	switch req.Operation { //nolint:exhaustive
+	case admissionv1.Create:
+		// for create operation we need to create secrets after namespace will be created
+		// use goroutine to not block main thread
+		go func() { //nolint:contextcheck
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+
+			log.Infof("Scheduled secrets creation %s...", waitForNamespaceCreation)
+			utils.SleepContext(ctx, waitForNamespaceCreation)
+
+			createSecrets(ctx)
+		}()
+	case admissionv1.Update:
+		createSecrets(ctx)
+	}
+
+	mutationPatch := []types.PatchOperation{
+		m.injectAnnotation(namespace.Annotations),
+		m.injectLabels(namespace.Labels),
+	}
+
+	patchBytes, err := json.Marshal(mutationPatch)
+	if err != nil {
+		return m.mutateError(namespace.Name, err)
 	}
 
 	return &admissionv1.AdmissionResponse{
@@ -280,6 +311,10 @@ func (m *Mutation) mutateNamespace(ctx context.Context, input *MutateInput) *adm
 		Result: &metav1.Status{
 			Status: metav1.StatusSuccess,
 		},
+		Patch: patchBytes,
+		PatchType: func() *admissionv1.PatchType {
+			return utils.Pnt(admissionv1.PatchTypeJSONPatch)
+		}(),
 	}
 }
 
@@ -390,9 +425,7 @@ func (m *Mutation) mutatePod(ctx context.Context, input *MutateInput) *admission
 		},
 		Patch: patchBytes,
 		PatchType: func() *admissionv1.PatchType {
-			pt := admissionv1.PatchTypeJSONPatch
-
-			return &pt
+			return utils.Pnt(admissionv1.PatchTypeJSONPatch)
 		}(),
 	}
 }
@@ -433,6 +466,21 @@ func (m *Mutation) injectAnnotation(annotations map[string]string) types.PatchOp
 		Op:    "add",
 		Path:  "/metadata/annotations",
 		Value: objAnnotations,
+	}
+}
+
+func (m *Mutation) injectLabels(labels map[string]string) types.PatchOperation {
+	objLabels := make(map[string]string)
+	if labels != nil {
+		objLabels = labels
+	}
+
+	objLabels[types.LabelManaged] = "true"
+
+	return types.PatchOperation{
+		Op:    "add",
+		Path:  "/metadata/labels",
+		Value: objLabels,
 	}
 }
 

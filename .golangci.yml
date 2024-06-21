@@ -5,20 +5,10 @@ issues:
 linters:
   enable-all: true
   disable:
-  # deprecated linters
-  - nosnakecase
-  - deadcode
-  - scopelint
-  - interfacer
-  - structcheck
-  - ifshort
-  - varcheck
-  - golint
-  ####################
+  - gomnd
+  - execinquery
   - gochecknoglobals
-  - exhaustivestruct
   - exhaustruct
   - varnamelen
   - musttag
   - depguard
-  - maligned
