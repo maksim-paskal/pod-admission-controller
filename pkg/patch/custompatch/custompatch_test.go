@@ -239,3 +239,107 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 		})
 	}
 }
+
+func TestAppend(t *testing.T) {
+	t.Parallel()
+
+	patch := custompatch.Patch{}
+
+	containerInfo := &types.ContainerInfo{
+		ContainerName: "test",
+		PodContainer: &types.PodContainer{
+			Order: 1,
+			Type:  "container",
+			Pod: &corev1.Pod{
+				Spec: corev1.PodSpec{
+					NodeSelector: map[string]string{
+						"value": "value",
+					},
+				},
+			},
+		},
+		SelectedRules: []*types.Rule{
+			{
+				CustomPatches: []types.PatchOperation{
+					{
+						Op:    "append",
+						Path:  "/spec/nodeselector",
+						Value: map[string]string{"test": "test"},
+					},
+				},
+			},
+		},
+	}
+
+	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(patchOps) != 1 {
+		t.Fatal("1 patch must be created")
+	}
+
+	if patchOps[0].Op != "add" {
+		t.Fatal("op must be add")
+	}
+
+	if patchOps[0].Path != "/spec/nodeselector" {
+		t.Fatal("op must be add")
+	}
+
+	if value, ok := patchOps[0].Value.(map[string]interface{}); ok {
+		if value["test"] != "test" {
+			t.Fatal("value must be test")
+		}
+
+		if value["value"] != "value" {
+			t.Fatal("value must be test")
+		}
+	} else {
+		t.Fatal("value must be map")
+	}
+}
+
+func TestAppendNotWellKnown(t *testing.T) {
+	t.Parallel()
+
+	patch := custompatch.Patch{}
+
+	containerInfo := &types.ContainerInfo{
+		ContainerName: "test",
+		PodContainer: &types.PodContainer{
+			Order: 1,
+			Type:  "container",
+			Pod: &corev1.Pod{
+				Spec: corev1.PodSpec{
+					NodeSelector: nil,
+				},
+			},
+		},
+		SelectedRules: []*types.Rule{
+			{
+				CustomPatches: []types.PatchOperation{
+					{
+						Op:    "append",
+						Path:  "/spec/nodeselector1",
+						Value: map[string]string{"test": "test"},
+					},
+				},
+			},
+		},
+	}
+
+	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(patchOps) != 1 {
+		t.Fatal("1 patch must be created")
+	}
+
+	if patchOps[0].Op != "append" {
+		t.Fatal("op must be append")
+	}
+}
