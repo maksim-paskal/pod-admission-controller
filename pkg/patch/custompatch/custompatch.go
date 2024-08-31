@@ -70,11 +70,11 @@ func (p *Patch) ignorePatch(patch types.PatchOperation, containerInfo *types.Con
 			return true
 		}
 	case "/spec/nodeselector":
-		if pod.Spec.NodeSelector == nil || len(pod.Spec.NodeSelector) == 0 {
+		if len(pod.Spec.NodeSelector) == 0 {
 			return true
 		}
 	case "/spec/topologyspreadconstraints":
-		if pod.Spec.TopologySpreadConstraints == nil || len(pod.Spec.TopologySpreadConstraints) == 0 {
+		if len(pod.Spec.TopologySpreadConstraints) == 0 {
 			return true
 		}
 	case strings.ToLower(containerInfo.PodContainer.ContainerPath() + "/readinessProbe"):
