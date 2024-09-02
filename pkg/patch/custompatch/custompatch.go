@@ -45,6 +45,8 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 				return nil, errors.Wrap(err, "error unmarshal newPatch")
 			}
 
+			newPatch = p.appendWellKnown(newPatch, containerInfo)
+
 			if p.ignorePatch(newPatch, containerInfo) {
 				continue
 			}
@@ -54,6 +56,39 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 	}
 
 	return patch, nil
+}
+
+// add well known values.
+func (p *Patch) appendWellKnown(patch types.PatchOperation, containerInfo *types.ContainerInfo) types.PatchOperation {
+	if patch.Op != "append" {
+		return patch
+	}
+
+	result := patch
+
+	if strings.ToLower(patch.Path) == "/spec/nodeselector" {
+		result.Op = "add"
+
+		if containerInfo.PodContainer.Pod.Spec.NodeSelector == nil {
+			return result
+		}
+
+		if value, ok := result.Value.(map[string]interface{}); ok {
+			merge := make(map[string]interface{})
+
+			for key, val := range containerInfo.PodContainer.Pod.Spec.NodeSelector {
+				merge[key] = val
+			}
+
+			for key, val := range value {
+				merge[key] = val
+			}
+
+			result.Value = merge
+		}
+	}
+
+	return result
 }
 
 // check well known operations and ignore them.
