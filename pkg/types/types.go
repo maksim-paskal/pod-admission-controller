@@ -75,6 +75,11 @@ type AddDefaultResources struct {
 	RemoveResources bool
 }
 
+type AddLifecycle struct {
+	Enabled   bool
+	Lifecycle corev1.Lifecycle
+}
+
 type Rule struct {
 	Debug                     bool
 	Name                      string
@@ -86,6 +91,7 @@ type Rule struct {
 	Tolerations               []corev1.Toleration
 	ImagePullSecrets          []corev1.LocalObjectReference
 	CustomPatches             []PatchOperation
+	AddLifecycle              AddLifecycle
 }
 
 func (r *Rule) Logf(format string, args ...interface{}) {

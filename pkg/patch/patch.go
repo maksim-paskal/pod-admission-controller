@@ -20,6 +20,7 @@ import (
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/custompatch"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/env"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/imagehost"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/lifecycle"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/nonroot"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/pullsecrets"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/resources"
@@ -41,6 +42,7 @@ var allPatchs = []Patch{
 	&tolerations.Patch{},
 	&pullsecrets.Patch{},
 	&custompatch.Patch{},
+	&lifecycle.Patch{},
 }
 
 func NewPatch(ctx context.Context, containerInfo *types.ContainerInfo) ([]types.PatchOperation, error) {
