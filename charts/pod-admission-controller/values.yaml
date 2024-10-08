@@ -19,6 +19,11 @@ resources:
     cpu: 100m
     memory: 200Mi
 
+priorityClassName: ""
+
+nodeSelector:
+  kubernetes.io/os: linux
+
 tolerations: []
 # - key: "kubernetes.azure.com/scalesetpriority"
 #   operator: "Equal"
