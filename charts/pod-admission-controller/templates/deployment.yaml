@@ -19,6 +19,11 @@ spec:
         app: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ .Release.Name }}
+{{ if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote}}
+{{ end }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | nindent 8 }}
 {{ if .Values.tolerations }}
       tolerations:
 {{ toYaml .Values.tolerations | nindent 6 }}
