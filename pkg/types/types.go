@@ -75,6 +75,11 @@ type AddDefaultResources struct {
 	RemoveResources bool
 }
 
+type AddTopologySpread struct {
+	Enabled                   bool
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint
+}
+
 type Rule struct {
 	Debug                     bool
 	Name                      string
@@ -86,6 +91,7 @@ type Rule struct {
 	Tolerations               []corev1.Toleration
 	ImagePullSecrets          []corev1.LocalObjectReference
 	CustomPatches             []PatchOperation
+	AddTopologySpread         AddTopologySpread
 }
 
 func (r *Rule) Logf(format string, args ...interface{}) {
