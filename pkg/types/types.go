@@ -185,6 +185,8 @@ type ContainerImage struct {
 }
 
 type ContainerInfo struct {
+	OwnerKind            string
+	OwnerName            string
 	PodContainer         *PodContainer
 	ContainerName        string
 	ContainerType        PodContainerType

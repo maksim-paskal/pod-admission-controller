@@ -346,8 +346,16 @@ func (m *Mutation) mutatePod(ctx context.Context, input *MutateInput) *admission
 
 	mutationPatch := make([]types.PatchOperation, 0)
 
+	var ownerKind, ownerName string
+	if len(pod.OwnerReferences) > 0 {
+		ownerKind = pod.OwnerReferences[0].Kind
+		ownerName = pod.OwnerReferences[0].Name
+	}
+
 	for _, podContainer := range types.PodContainersFromPod(namespace, &pod) {
 		containerInfo := &types.ContainerInfo{
+			OwnerKind:            ownerKind,
+			OwnerName:            ownerName,
 			PodContainer:         podContainer,
 			ContainerName:        podContainer.Container.Name,
 			ContainerType:        podContainer.Type,
