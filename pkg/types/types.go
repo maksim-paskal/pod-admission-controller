@@ -75,6 +75,26 @@ type AddDefaultResources struct {
 	RemoveResources bool
 }
 
+type AddTopologySpread struct {
+	Enabled                   bool
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint
+}
+
+func (a *AddTopologySpread) Clone() AddTopologySpread {
+	my, err := json.Marshal(a)
+	if err != nil {
+		log.Warn(err)
+
+		return AddTopologySpread{}
+	}
+
+	var clone AddTopologySpread
+
+	_ = json.Unmarshal(my, &clone)
+
+	return clone
+}
+
 type Rule struct {
 	Debug                     bool
 	Name                      string
@@ -86,6 +106,7 @@ type Rule struct {
 	Tolerations               []corev1.Toleration
 	ImagePullSecrets          []corev1.LocalObjectReference
 	CustomPatches             []PatchOperation
+	AddTopologySpread         AddTopologySpread
 }
 
 func (r *Rule) Logf(format string, args ...interface{}) {
