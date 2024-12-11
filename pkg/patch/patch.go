@@ -24,6 +24,7 @@ import (
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/pullsecrets"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/resources"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/tolerations"
+	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/topologyspread"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
 )
@@ -41,6 +42,7 @@ var allPatchs = []Patch{
 	&tolerations.Patch{},
 	&pullsecrets.Patch{},
 	&custompatch.Patch{},
+	&topologyspread.Patch{},
 }
 
 func NewPatch(ctx context.Context, containerInfo *types.ContainerInfo) ([]types.PatchOperation, error) {
