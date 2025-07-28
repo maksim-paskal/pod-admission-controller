@@ -251,7 +251,7 @@ func (m *Mutation) mutateIngress(_ context.Context, input *MutateInput) *admissi
 
 const waitForNamespaceCreation = 10 * time.Second
 
-func (m *Mutation) mutateNamespace(ctx context.Context, input *MutateInput) *admissionv1.AdmissionResponse { //nolint:lll,funlen
+func (m *Mutation) mutateNamespace(ctx context.Context, input *MutateInput) *admissionv1.AdmissionResponse { //nolint:lll
 	req := input.AdmissionReview.Request
 
 	namespace := corev1.Namespace{}

@@ -30,7 +30,7 @@ func TestReplaceImageHostPatch(t *testing.T) {
 
 	const requiredValue = "fromenv"
 
-	os.Setenv("TEST_ENV", requiredValue) //nolint:tenv
+	os.Setenv("TEST_ENV", requiredValue) //nolint:tenv,usetesting
 
 	containerInfo := &types.ContainerInfo{
 		PodContainer: &types.PodContainer{

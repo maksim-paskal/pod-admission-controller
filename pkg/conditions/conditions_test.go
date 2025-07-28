@@ -49,7 +49,7 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 	t.Parallel()
 	log.SetLevel(log.DebugLevel)
 
-	os.Setenv("TEST_ENV", "test") //nolint:tenv
+	os.Setenv("TEST_ENV", "test") //nolint:tenv,usetesting
 
 	containerInfo := &types.ContainerInfo{
 		Namespace: "1234567890",
