@@ -73,6 +73,7 @@ func TestReplaceImageHostPatchDockerIo(t *testing.T) { //nolint:funlen
 	type Test struct {
 		Image    string
 		Required string
+		Custom   *types.ReplaceContainerImageHost
 	}
 
 	tests := []Test{
@@ -100,12 +101,31 @@ func TestReplaceImageHostPatchDockerIo(t *testing.T) { //nolint:funlen
 			Image:    "test/alpine:3.12",
 			Required: "my.docker.io/test/alpine:3.12",
 		},
+		{
+			Image:    "quay.io/jetstack/cert-manager-cainjector:v1.17.2",
+			Required: "myhost.com/quay/jetstack/cert-manager-cainjector:v1.17.2",
+			Custom: &types.ReplaceContainerImageHost{
+				Enabled: true,
+				From:    "quay.io",
+				To:      "myhost.com/quay",
+			},
+		},
 	}
 
 	for _, test := range tests {
 		imageInfo, err := api.GetImageInfo(test.Image)
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		replaceContainerImageHost := types.ReplaceContainerImageHost{
+			Enabled: true,
+			From:    "docker.io",
+			To:      "my.docker.io",
+		}
+
+		if test.Custom != nil {
+			replaceContainerImageHost = *test.Custom
 		}
 
 		containerInfo := &types.ContainerInfo{
@@ -116,11 +136,7 @@ func TestReplaceImageHostPatchDockerIo(t *testing.T) { //nolint:funlen
 			Image: imageInfo,
 			SelectedRules: []*types.Rule{
 				{
-					ReplaceContainerImageHost: types.ReplaceContainerImageHost{
-						Enabled: true,
-						From:    "docker.io",
-						To:      `my.docker.io`,
-					},
+					ReplaceContainerImageHost: replaceContainerImageHost,
 				},
 			},
 		}
