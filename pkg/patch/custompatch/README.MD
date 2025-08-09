@@ -7,4 +7,7 @@ rules:
     path: "/spec/nodeSelector"
   - op: "remove"
     path: "{{ .PodContainer.ContainerPath }}/resources"
+  - op: "add"
+    # Use ` for strings in templates
+    value: "{{ default `a` .OwnerName }}"
 ```

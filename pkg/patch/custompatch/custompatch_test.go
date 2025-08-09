@@ -38,6 +38,18 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 	tests := []testCase{
 		{
 			CustomPatches: types.PatchOperation{
+				Op:    "add",
+				Path:  "/spec/affinity",
+				Value: "{{ default `a` .OwnerName }}",
+			},
+			Expected: types.PatchOperation{
+				Op:    "add",
+				Path:  "/spec/affinity",
+				Value: "a",
+			},
+		},
+		{
+			CustomPatches: types.PatchOperation{
 				Op:    "{{ .ContainerName }}",
 				Path:  "{{ .PodContainer.ContainerPath }}/annotations",
 				Value: nil,
