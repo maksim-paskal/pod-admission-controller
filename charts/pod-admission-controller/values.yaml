@@ -10,6 +10,8 @@ image:
   tag: v0.0.16
   pullPolicy: IfNotPresent
 
+imagePullSecrets: []
+
 env: []
 args: []
 

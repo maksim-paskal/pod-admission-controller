@@ -19,6 +19,10 @@ spec:
         app: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ .Release.Name }}
+{{ if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 6 }}
+{{ end }}
 {{ if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName | quote}}
 {{ end }}
