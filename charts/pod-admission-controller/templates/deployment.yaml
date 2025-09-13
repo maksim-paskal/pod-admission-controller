@@ -47,7 +47,7 @@ spec:
 {{ end }}
       containers:
       - name: {{ .Release.Name }}
-        image: {{ .Values.registry.image }}
+        image: {{ printf "%s/%s:%s" .Values.registry.registry .Values.registry.repository .Values.registry.tag }}
         imagePullPolicy: {{ .Values.registry.imagePullPolicy }}
         securityContext:
           runAsNonRoot: true

@@ -5,8 +5,10 @@ pdb:
   maxUnavailable: 1
 
 registry:
-  image: paskalmaksim/pod-admission-controller:latest
-  imagePullPolicy: Always
+  registry: docker.io
+  repository: paskalmaksim/pod-admission-controller
+  tag: v0.0.16
+  imagePullPolicy: IfNotPresent
 
 env: []
 args: []
