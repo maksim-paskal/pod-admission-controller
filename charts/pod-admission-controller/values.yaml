@@ -4,11 +4,11 @@ pdb:
   enabled: false
   maxUnavailable: 1
 
-registry:
+image:
   registry: docker.io
   repository: paskalmaksim/pod-admission-controller
   tag: v0.0.16
-  imagePullPolicy: IfNotPresent
+  pullPolicy: IfNotPresent
 
 env: []
 args: []
