@@ -13,7 +13,6 @@ limitations under the License.
 package tolerations_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/tolerations"
@@ -40,7 +39,7 @@ func TestTolerations(t *testing.T) {
 
 	patch := tolerations.Patch{}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

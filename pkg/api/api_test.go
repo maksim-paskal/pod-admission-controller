@@ -13,7 +13,6 @@ limitations under the License.
 package api_test
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -102,7 +101,7 @@ func TestMutation(t *testing.T) { //nolint:funlen
 			},
 		}
 
-		response := api.NewMutation().Mutate(context.TODO(), &input)
+		response := api.NewMutation().Mutate(t.Context(), &input)
 
 		if response.Result.Status != "Success" {
 			t.Fatalf("status must be Success, got %s, %s", response.Result.Status, response.Result.Message)

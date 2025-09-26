@@ -13,7 +13,6 @@ limitations under the License.
 package resources_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -51,7 +50,7 @@ func TestNullResources(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +89,7 @@ func TestCreateDefaultResourcesPatch(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

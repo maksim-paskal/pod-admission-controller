@@ -13,7 +13,6 @@ limitations under the License.
 package imagehost_test
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -51,7 +50,7 @@ func TestReplaceImageHostPatch(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +140,7 @@ func TestReplaceImageHostPatchDockerIo(t *testing.T) { //nolint:funlen
 			},
 		}
 
-		patchOps, err := patch.Create(context.TODO(), containerInfo)
+		patchOps, err := patch.Create(t.Context(), containerInfo)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -180,7 +179,7 @@ func TestReplaceImageHostPatchNotDockerIo(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +219,7 @@ func TestReplaceImageTag(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

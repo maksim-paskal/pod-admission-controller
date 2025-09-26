@@ -13,7 +13,6 @@ limitations under the License.
 package env_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -63,7 +62,7 @@ func TestCreateEnvPatchEnv(t *testing.T) { //nolint:funlen
 		},
 	}
 
-	envPatch, err := patch.Create(context.TODO(), containerInfo)
+	envPatch, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +83,7 @@ func TestCreateEnvPatchEnv(t *testing.T) { //nolint:funlen
 		},
 	}
 
-	envPatch, err = patch.Create(context.TODO(), containerInfo)
+	envPatch, err = patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

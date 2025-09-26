@@ -18,7 +18,7 @@ import (
 	"regexp"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/sentry"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
 	"github.com/pkg/errors"
