@@ -20,12 +20,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestLifeCyclePatch(t *testing.T) {
+func TestLifeCyclePatch(t *testing.T) { //nolint:funlen
 	t.Parallel()
 
 	patch := topologyspread.Patch{}
 
 	containerInfo := &types.ContainerInfo{
+		OwnerKind: "Deployment",
+		PodAnnotations: map[string]string{
+			"annotation-key": "annotation-value",
+			"region":         "usn1",
+		},
 		PodLabels: map[string]string{
 			"app":               "test",
 			"env":               "dev",
@@ -42,7 +47,9 @@ func TestLifeCyclePatch(t *testing.T) {
 					Enabled: true,
 					TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
 						{
-							MaxSkew: 1,
+							MaxSkew:           1,
+							WhenUnsatisfiable: corev1.UnsatisfiableConstraintAction("FakeValue"),
+							TopologyKey:       "TEMPLATE-VALUE-{{ default `test` (index .PodAnnotations `annotation-key`) }}",
 						},
 					},
 				},
@@ -61,5 +68,22 @@ func TestLifeCyclePatch(t *testing.T) {
 
 	if patchOps[0].Op != "add" || patchOps[0].Path != "/spec/topologySpreadConstraints" {
 		t.Fatalf("not corrected patch %s", patchOps[0].String())
+	}
+
+	templated, ok := patchOps[0].Value.([]corev1.TopologySpreadConstraint)
+	if !ok {
+		t.Fatalf("not corrected patch value type %T", patchOps[0].Value)
+	}
+
+	if got := templated[0].TopologyKey; got != "TEMPLATE-VALUE-annotation-value" {
+		t.Fatalf("template value not rendered %s", got)
+	}
+
+	if got := templated[0].MaxSkew; got != 1 {
+		t.Fatalf("template value not rendered %d", got)
+	}
+
+	if got := templated[0].WhenUnsatisfiable; got != "FakeValue" {
+		t.Fatalf("template value not rendered %s", got)
 	}
 }
