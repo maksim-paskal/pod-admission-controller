@@ -13,7 +13,6 @@ limitations under the License.
 package pullsecrets_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/pullsecrets"
@@ -38,7 +37,7 @@ func TestPullSecrets(t *testing.T) {
 
 	patch := pullsecrets.Patch{}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +88,7 @@ func TestPullSecretsExists(t *testing.T) {
 
 	patch := pullsecrets.Patch{}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

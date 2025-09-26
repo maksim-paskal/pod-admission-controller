@@ -13,7 +13,6 @@ limitations under the License.
 package patch_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -31,7 +30,7 @@ func TestNewPatch(t *testing.T) {
 		Image: &types.ContainerImage{},
 	}
 
-	patchOps, err := patch.NewPatch(context.TODO(), containerInfo)
+	patchOps, err := patch.NewPatch(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

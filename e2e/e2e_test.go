@@ -52,7 +52,7 @@ func TestMutation(t *testing.T) { //nolint:funlen
 		t.Fatal(err)
 	}
 
-	ctx := context.TODO()
+	ctx := t.Context()
 
 	t.Run("pods", func(t *testing.T) {
 		t.Parallel()

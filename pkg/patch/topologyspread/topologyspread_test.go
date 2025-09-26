@@ -13,7 +13,6 @@ limitations under the License.
 package topologyspread_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/maksim-paskal/pod-admission-controller/pkg/patch/topologyspread"
@@ -51,7 +50,7 @@ func TestLifeCyclePatch(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

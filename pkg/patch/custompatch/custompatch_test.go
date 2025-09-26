@@ -13,7 +13,6 @@ limitations under the License.
 package custompatch_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -228,7 +227,7 @@ func TestCustompatch(t *testing.T) { //nolint:funlen
 				},
 			}
 
-			patchOps, err := patch.Create(context.TODO(), containerInfo)
+			patchOps, err := patch.Create(t.Context(), containerInfo)
 			if test.Error && err != nil {
 				t.Skip("its ok")
 			}
@@ -283,7 +282,7 @@ func TestAppend(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +341,7 @@ func TestAppendNotWellKnown(t *testing.T) {
 		},
 	}
 
-	patchOps, err := patch.Create(context.TODO(), containerInfo)
+	patchOps, err := patch.Create(t.Context(), containerInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,7 +14,6 @@ package sentry_test
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -70,7 +69,7 @@ func projectkey(w http.ResponseWriter, r *http.Request) {
 func Test(t *testing.T) { //nolint:funlen,cyclop
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	log.SetLevel(log.DebugLevel)
 
