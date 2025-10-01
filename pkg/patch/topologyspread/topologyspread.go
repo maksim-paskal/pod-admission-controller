@@ -14,9 +14,12 @@ package topologyspread
 
 import (
 	"context"
+	"encoding/json"
 	"slices"
 
+	"github.com/maksim-paskal/pod-admission-controller/pkg/template"
 	"github.com/maksim-paskal/pod-admission-controller/pkg/types"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -48,6 +51,20 @@ func (p *Patch) Create(_ context.Context, containerInfo *types.ContainerInfo) ([
 		}
 
 		topologySpreadConstraints := selectedRule.AddTopologySpread.Clone().TopologySpreadConstraints
+
+		topologySpreadConstraintsJSON, err := json.Marshal(topologySpreadConstraints)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal topologySpreadConstraints")
+		}
+
+		topologySpreadConstraintsFormatted, err := template.Get(containerInfo, string(topologySpreadConstraintsJSON))
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get formatted topologySpreadConstraints")
+		}
+
+		if err := json.Unmarshal([]byte(topologySpreadConstraintsFormatted), &topologySpreadConstraints); err != nil {
+			return nil, errors.Wrap(err, "error unmarshal topologySpreadConstraints")
+		}
 
 		for i := range topologySpreadConstraints {
 			topologySpreadConstraints[i].LabelSelector = &metav1.LabelSelector{

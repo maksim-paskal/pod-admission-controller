@@ -1,6 +1,5 @@
 KUBECONFIG=$(HOME)/.kube/dev
-tag=dev
-image=paskalmaksim/pod-admission-controller:$(tag)
+image=paskalmaksim/pod-admission-controller:$(shell git rev-parse --short HEAD)
 config=config.yaml
 testnamespace=test-pod-admission-controller
 helm_args=
@@ -56,10 +55,7 @@ sslInit:
 	pod-admission-controller.pod-admission-controller.svc.cluster.local
 
 build:
-	git tag -d `git tag -l "helm-chart-*"`
-	go run github.com/goreleaser/goreleaser@latest build --clean --snapshot --skip=validate
-	mv ./dist/pod-admission-controller_linux_amd64_v1/pod-admission-controller pod-admission-controller
-	docker build --pull --push --platform=linux/amd64 . -t $(image)
+	docker build --pull --push --platform=linux/amd64,linux/arm64 . -t $(image) -f Dockerfile.dev
 
 restart:
 	kubectl -n pod-admission-controller rollout restart deploy pod-admission-controller
