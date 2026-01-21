@@ -230,6 +230,14 @@ func (c *ContainerInfo) String() string {
 	return string(out)
 }
 
+func (c *ContainerInfo) GetAnnotation(key string) string {
+	if val, ok := c.GetPodAnnotation(key); ok {
+		return val
+	}
+
+	return ""
+}
+
 // return namespaced pod annotation value.
 func (c *ContainerInfo) GetPodAnnotation(key string) (string, bool) {
 	if val, ok := c.PodAnnotations[key]; ok {
