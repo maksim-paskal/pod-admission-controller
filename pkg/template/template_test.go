@@ -24,6 +24,12 @@ func TestTemplateValue(t *testing.T) {
 	t.Setenv("SOME_TEST_ENV", "test")
 
 	containerInfo := &types.ContainerInfo{
+		NamespaceAnnotations: map[string]string{
+			"test1": "value1",
+		},
+		PodAnnotations: map[string]string{
+			"test": "value",
+		},
 		Image: &types.ContainerImage{Name: "/a/b/c/d:e"},
 	}
 
@@ -37,6 +43,8 @@ func TestTemplateValue(t *testing.T) {
 	cases[`{{ ResolveFallback "fakedomain.fakedomain" "fakefallback" }}`] = "fakefallback"
 	cases[`{{ env "SOME_TEST_ENV" }}`] = "test"
 	cases[`{{ env "SOME_TEST_ENV" | replace "te" "de" }}`] = "dest"
+	cases[`{{ .GetAnnotation "test" }}`] = "value"
+	cases[`{{ .GetAnnotation "test1" }}`] = "value1"
 
 	for k, v := range cases {
 		value, err := template.Get(containerInfo, k)
