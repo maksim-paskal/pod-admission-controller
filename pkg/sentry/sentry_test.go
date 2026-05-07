@@ -35,8 +35,25 @@ func GetHandler() http.Handler {
 	mux.HandleFunc("/api/0/projects/the-interstellar-jurisdiction/the-spoiled-yoghurt/keys/", projectkey)
 	mux.HandleFunc("/api/0/projects/the-interstellar-jurisdiction/prime-mover/keys/", projectkey)
 	mux.HandleFunc("/api/0/projects/the-interstellar-jurisdiction/pump-station/keys/", projectkey)
+	mux.HandleFunc("/api/0/organizations/test-org/", organizations)
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Warnf("not found %s", r.URL.Path)
+		w.WriteHeader(http.StatusInternalServerError)
+	})
 
 	return mux
+}
+
+func organizations(w http.ResponseWriter, _ *http.Request) {
+	projectsByte, err := os.ReadFile("testdata/organizations.json")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	_, _ = w.Write(projectsByte)
 }
 
 func projects(w http.ResponseWriter, _ *http.Request) {
@@ -66,7 +83,7 @@ func projectkey(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(projectsByte)
 }
 
-func Test(t *testing.T) { //nolint:funlen,cyclop
+func Test(t *testing.T) { //nolint:funlen
 	t.Parallel()
 
 	ctx := t.Context()
@@ -75,7 +92,7 @@ func Test(t *testing.T) { //nolint:funlen,cyclop
 
 	params := config.Params{
 		Sentry: &config.Sentry{
-			Endpoint:     ts.URL,
+			Endpoint:     ts.URL + "/api/0/",
 			Relay:        "http://localhost:3000",
 			Token:        "test-token",
 			Organization: "test-org",
@@ -98,43 +115,6 @@ func Test(t *testing.T) { //nolint:funlen,cyclop
 	if err := sentry.CreateCache(ctx); err != nil {
 		t.Fatal(err)
 	}
-
-	t.Run("TestGetProjects", func(t *testing.T) {
-		t.Parallel()
-
-		projects, err := sentry.GetProjects(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if expected := 3; len(projects) != expected {
-			t.Fatalf("expected %d projects, got %d", expected, len(projects))
-		}
-	})
-
-	t.Run("TestGetProjectKeys", func(t *testing.T) {
-		t.Parallel()
-
-		project := sentry.Project{
-			Organization: sentry.Organization{
-				Slug: "test-org",
-			},
-			Slug: "test-project",
-		}
-
-		projectkey, err := sentry.GetProjectKeys(ctx, project)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if expected := 1; len(projectkey) != expected {
-			t.Fatalf("expected %d project key, got %d", expected, len(projectkey))
-		}
-
-		if expected := "http://test-project@localhost:3000/2"; projectkey[0].Dsn.Public != expected {
-			t.Fatalf("expected %s project key, got %s", expected, projectkey[0].Dsn.Public)
-		}
-	})
 
 	t.Run("GetSentryDSN", func(t *testing.T) {
 		t.Parallel()

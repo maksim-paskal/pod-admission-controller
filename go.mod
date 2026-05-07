@@ -6,6 +6,7 @@ toolchain go1.24.7
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
+	github.com/atlassian/go-sentry-api v1.0.0
 	github.com/distribution/reference v0.6.0
 	github.com/maksim-paskal/logrus-hook-sentry v0.1.1
 	github.com/pkg/errors v0.9.1

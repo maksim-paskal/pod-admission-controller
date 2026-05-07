@@ -1,0 +1,24 @@
+{
+  "avatar": {
+    "avatarType": "letter_avatar",
+    "avatarUuid": null
+  },
+  "dateCreated": "2018-11-06T21:19:55.101Z",
+  "hasAuthProvider": false,
+  "id": "2",
+  "isEarlyAdopter": false,
+  "allowMemberInvite": true,
+  "allowMemberProjectCreation": true,
+  "allowSuperuserAccess": false,
+  "links": {
+    "organizationUrl": "https://the-interstellar-jurisdiction.sentry.io",
+    "regionUrl": "https://us.sentry.io"
+  },
+  "name": "The Interstellar Jurisdiction",
+  "require2FA": false,
+  "slug": "the-interstellar-jurisdiction",
+  "status": {
+    "id": "active",
+    "name": "active"
+  }
+}

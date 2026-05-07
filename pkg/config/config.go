@@ -49,6 +49,16 @@ type Sentry struct {
 	Cache    map[string]string
 }
 
+func (s *Sentry) HasProjectPrefix(prefix string) bool {
+	for _, p := range s.Projects {
+		if p == prefix {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *Sentry) GetPrefixes(name string) []string {
 	result := make([]string, 0)
 
