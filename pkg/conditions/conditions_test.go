@@ -66,6 +66,9 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 					},
 				},
 				Spec: corev1.PodSpec{
+					NodeSelector: map[string]string{
+						"testKey": "testValue",
+					},
 					Volumes: []corev1.Volume{
 						{
 							Name: "test-volume-01",
@@ -434,6 +437,16 @@ func TestCheckConditions(t *testing.T) { //nolint:funlen,maintidx
 					Key:      ".PodContainer.OwnerKind",
 					Operator: "equal",
 					Value:    "ReplicaSet",
+				},
+			},
+		},
+		{
+			Match: true,
+			Conditions: []types.Condition{
+				{
+					Key:      ".PodContainer.Pod.Spec.NodeSelector",
+					Operator: "regexp",
+					Value:    `(testKey):.+`,
 				},
 			},
 		},
